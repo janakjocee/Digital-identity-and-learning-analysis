@@ -5,7 +5,7 @@
 ![Python](https://img.shields.io/badge/python-3.9%2B-blue.svg)
 ![React](https://img.shields.io/badge/react-18.2.0-61DAFB.svg)
 
-> **Research-Based Educational Platform** | Published IEEE Research by Janak Raj Joshi, MSc Data Science - London
+> **Research-Based Educational Platform** | Published IEEE Research by Janak Raj Joshi,MSc Data Science - London
 
 ## 📖 Research Reference
 
