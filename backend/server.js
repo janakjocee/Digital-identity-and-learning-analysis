@@ -24,7 +24,8 @@ const analyticsRoutes = require('./src/routes/analytics.routes');
 const aiRoutes = require('./src/routes/ai.routes');
 
 // Import middleware
-const errorHandler = require('./src/middleware/error.middleware');
+// error.middleware.js exports an object: { errorHandler, asyncHandler, notFound, ... }
+const { errorHandler } = require('./src/middleware/error.middleware');
 
 // Initialize Express app
 const app = express();
@@ -37,16 +38,19 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       scriptSrc: ["'self'"],
-      imgSrc: ["'self'", "data:", "https:"],
+      imgSrc: ["'self'", 'data:', 'https:'],
     },
   },
 }));
 
 // CORS configuration
+// NOTE: For production, set FRONTEND_URL to your Vercel URL (e.g. https://xxx.vercel.app)
+const corsOrigins = process.env.NODE_ENV === 'production'
+  ? [process.env.FRONTEND_URL || 'https://yourdomain.com']
+  : ['http://localhost:5173', 'http://localhost:3000'];
+
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
-    ? ['https://yourdomain.com'] 
-    : ['http://localhost:5173', 'http://localhost:3000'],
+  origin: corsOrigins,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization']
@@ -125,9 +129,9 @@ const connectDB = async () => {
       // useNewUrlParser: true,
       // useUnifiedTopology: true,
     });
-    
+
     console.log(`MongoDB Connected: ${conn.connection.host}`);
-    
+
     // Create indexes
     await createIndexes();
   } catch (error) {
@@ -142,21 +146,21 @@ const createIndexes = async () => {
     const User = require('./src/models/User');
     const QuizAttempt = require('./src/models/QuizAttempt');
     const LearningActivity = require('./src/models/LearningActivity');
-    
+
     // User indexes
     await User.collection.createIndex({ email: 1 }, { unique: true });
     await User.collection.createIndex({ role: 1 });
     await User.collection.createIndex({ status: 1 });
     await User.collection.createIndex({ assignedClass: 1 });
-    
+
     // Quiz attempt indexes
     await QuizAttempt.collection.createIndex({ student: 1, createdAt: -1 });
     await QuizAttempt.collection.createIndex({ quiz: 1, student: 1 });
-    
+
     // Learning activity indexes
     await LearningActivity.collection.createIndex({ student: 1, createdAt: -1 });
     await LearningActivity.collection.createIndex({ module: 1, student: 1 });
-    
+
     console.log('Database indexes created successfully');
   } catch (error) {
     console.error('Error creating indexes:', error.message);
