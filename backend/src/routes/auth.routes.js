@@ -62,9 +62,20 @@ router.post('/register', authValidation.register, asyncHandler(async (req, res) 
     role: 'student',
     status: 'pending'
   });
-  
-  // Generate tokens
-  const { accessToken, refreshToken } = generateTokens(user._id);
+
+  // Generate tokens — if this fails (e.g. missing JWT_SECRET), remove the
+  // newly created user so the email is not permanently blocked.
+  let accessToken, refreshToken;
+  try {
+    ({ accessToken, refreshToken } = generateTokens(user._id));
+  } catch (tokenError) {
+    try {
+      await User.deleteOne({ _id: user._id });
+    } catch (deleteError) {
+      console.error(`Failed to clean up orphaned user ${user._id} after token error:`, deleteError);
+    }
+    throw tokenError;
+  }
   
   // Log registration
   await AuditLog.log({

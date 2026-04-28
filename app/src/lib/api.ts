@@ -5,6 +5,8 @@
 
 import axios from 'axios';
 
+// Set VITE_API_URL in your Vercel environment variables to:
+// https://digital-identity-and-learning-analysis.onrender.com/api
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 const api = axios.create({
