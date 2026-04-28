@@ -72,7 +72,7 @@ router.post('/register', authValidation.register, asyncHandler(async (req, res) 
     try {
       await User.deleteOne({ _id: user._id });
     } catch (deleteError) {
-      console.error(`Failed to clean up orphaned user ${user._id} after token error:`, deleteError.message);
+      console.error(`Failed to clean up orphaned user ${user._id} after token error:`, deleteError);
     }
     throw tokenError;
   }
