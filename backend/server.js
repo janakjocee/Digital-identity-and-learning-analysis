@@ -14,6 +14,21 @@ const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
+// Validate required environment variables at startup
+const REQUIRED_ENV_VARS = ['JWT_SECRET', 'JWT_REFRESH_SECRET', 'MONGODB_URI'];
+const missingEnvVars = REQUIRED_ENV_VARS.filter(v => !process.env[v]);
+if (missingEnvVars.length > 0) {
+  console.error(`FATAL: Missing required environment variables: ${missingEnvVars.join(', ')}`);
+  console.error('Please set these variables in your .env file or deployment environment.');
+  process.exit(1);
+}
+// In production, CORS_ORIGINS or FRONTEND_URL must be set so the frontend can reach the API
+if (process.env.NODE_ENV === 'production' && !process.env.CORS_ORIGINS && !process.env.FRONTEND_URL) {
+  console.error('FATAL: In production, set CORS_ORIGINS (comma-separated list of allowed frontend URLs)');
+  console.error('       or FRONTEND_URL to the URL of your deployed frontend (e.g. https://your-app.vercel.app).');
+  process.exit(1);
+}
+
 // Import routes
 const authRoutes = require('./src/routes/auth.routes');
 const userRoutes = require('./src/routes/user.routes');
@@ -44,13 +59,21 @@ app.use(helmet({
 }));
 
 // CORS configuration
-// NOTE: For production, set FRONTEND_URL to your Vercel URL (e.g. https://xxx.vercel.app)
-const corsOrigins = process.env.NODE_ENV === 'production'
-  ? [process.env.FRONTEND_URL || 'https://yourdomain.com']
-  : ['http://localhost:5173', 'http://localhost:3000'];
+// In production set CORS_ORIGINS (comma-separated) or FRONTEND_URL to your deployed frontend URL
+// e.g. CORS_ORIGINS=https://your-app.vercel.app,https://your-custom-domain.com
+const getAllowedOrigins = () => {
+  if (process.env.CORS_ORIGINS) {
+    return process.env.CORS_ORIGINS.split(',').map(o => o.trim()).filter(Boolean);
+  }
+  if (process.env.NODE_ENV === 'production' && process.env.FRONTEND_URL) {
+    return [process.env.FRONTEND_URL];
+  }
+  // Development fallback
+  return ['http://localhost:5173', 'http://localhost:3000'];
+};
 
 app.use(cors({
-  origin: corsOrigins,
+  origin: getAllowedOrigins(),
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization']
