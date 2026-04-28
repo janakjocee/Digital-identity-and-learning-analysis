@@ -5,11 +5,21 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Eye, EyeOff, Mail, Lock, User, GraduationCap, Calendar, Brain, ArrowRight } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, User, GraduationCap, Calendar, Brain, ArrowRight, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { useAuth } from '../contexts/AuthContext';
+
+/** Returns a human-readable description of which password requirements are unmet. */
+function getPasswordErrors(password: string): string[] {
+  const errors: string[] = [];
+  if (password.length < 8) errors.push('At least 8 characters');
+  if (!/[A-Z]/.test(password)) errors.push('At least one uppercase letter');
+  if (!/[a-z]/.test(password)) errors.push('At least one lowercase letter');
+  if (!/\d/.test(password)) errors.push('At least one number');
+  return errors;
+}
 
 export default function Register() {
   const [formData, setFormData] = useState({
@@ -23,10 +33,16 @@ export default function Register() {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const { register } = useAuth();
   const navigate = useNavigate();
 
+  const passwordErrors = getPasswordErrors(formData.password);
+  const passwordValid = formData.password.length > 0 && passwordErrors.length === 0;
+  const passwordsMatch = formData.password === formData.confirmPassword;
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    setErrorMessage(null);
     setFormData(prev => ({
       ...prev,
       [e.target.name]: e.target.value
@@ -35,8 +51,15 @@ export default function Register() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (formData.password !== formData.confirmPassword) {
+    setErrorMessage(null);
+
+    if (!passwordsMatch) {
+      setErrorMessage('Passwords do not match.');
+      return;
+    }
+
+    if (!passwordValid) {
+      setErrorMessage('Password does not meet the requirements below.');
       return;
     }
 
@@ -52,8 +75,13 @@ export default function Register() {
         dateOfBirth: formData.dateOfBirth || undefined
       });
       navigate('/dashboard');
-    } catch (error) {
-      // Error is handled in auth context
+    } catch (error: any) {
+      // The toast is already shown by AuthContext; mirror the message inline
+      // so it stays visible even after the toast disappears.
+      const msg = error?.response?.data?.errors?.[0]?.message
+        || error?.response?.data?.message
+        || (error?.request ? 'Unable to reach the server. Please try again.' : 'Registration failed. Please try again.');
+      setErrorMessage(msg);
     } finally {
       setIsLoading(false);
     }
@@ -90,6 +118,14 @@ export default function Register() {
           className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 p-8"
         >
           <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Inline error banner */}
+            {errorMessage && (
+              <div className="flex items-start gap-2 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 px-4 py-3 text-sm text-red-700 dark:text-red-400">
+                <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                <span>{errorMessage}</span>
+              </div>
+            )}
+
             {/* Name Fields */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -188,7 +224,6 @@ export default function Register() {
                   onChange={handleChange}
                   className="pl-10 pr-10"
                   required
-                  minLength={8}
                 />
                 <button
                   type="button"
@@ -198,9 +233,27 @@ export default function Register() {
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
               </div>
-              <p className="text-xs text-slate-500">
-                Must be at least 8 characters with uppercase, lowercase, and number
-              </p>
+              {/* Live password requirements */}
+              {formData.password.length > 0 && (
+                <ul className="mt-1 space-y-1">
+                  {[
+                    { label: 'At least 8 characters', ok: formData.password.length >= 8 },
+                    { label: 'One uppercase letter (A–Z)', ok: /[A-Z]/.test(formData.password) },
+                    { label: 'One lowercase letter (a–z)', ok: /[a-z]/.test(formData.password) },
+                    { label: 'One number (0–9)', ok: /\d/.test(formData.password) },
+                  ].map(({ label, ok }) => (
+                    <li key={label} className={`flex items-center gap-1.5 text-xs ${ok ? 'text-green-600 dark:text-green-400' : 'text-slate-500'}`}>
+                      <CheckCircle2 className={`w-3.5 h-3.5 ${ok ? 'text-green-500' : 'text-slate-300'}`} />
+                      {label}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {formData.password.length === 0 && (
+                <p className="text-xs text-slate-500">
+                  Must be at least 8 characters with uppercase, lowercase, and number
+                </p>
+              )}
             </div>
 
             {/* Confirm Password */}
@@ -215,7 +268,7 @@ export default function Register() {
                 onChange={handleChange}
                 required
               />
-              {formData.password !== formData.confirmPassword && formData.confirmPassword && (
+              {!passwordsMatch && formData.confirmPassword && (
                 <p className="text-xs text-red-500">Passwords do not match</p>
               )}
             </div>
@@ -223,7 +276,7 @@ export default function Register() {
             <Button
               type="submit"
               className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 h-12"
-              disabled={isLoading || formData.password !== formData.confirmPassword}
+              disabled={isLoading || !passwordsMatch}
             >
               {isLoading ? (
                 <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" />
