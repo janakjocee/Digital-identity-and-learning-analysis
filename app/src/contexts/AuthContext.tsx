@@ -7,6 +7,37 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { toast } from 'sonner';
 import api from '../lib/api';
 
+/**
+ * Build a human-readable error message from an Axios error.
+ *
+ * Priority order:
+ *  1. First field-level validation message from the backend `errors` array
+ *  2. Top-level `message` from the backend JSON body
+ *  3. Timeout / network-level error
+ *  4. `fallback` string (e.g. "Registration failed")
+ */
+function getErrorMessage(error: any, fallback: string): string {
+  // Server responded with an error status
+  if (error.response) {
+    const data = error.response.data;
+    // Show the first field-level validation error if available
+    if (data?.errors?.length) {
+      return data.errors[0].message as string;
+    }
+    return (data?.message as string) || fallback;
+  }
+
+  // Request was made but no response received (network / CORS / server down)
+  if (error.request) {
+    if (error.code === 'ECONNABORTED') {
+      return 'The server took too long to respond. It may be starting up — please try again in a moment.';
+    }
+    return 'Unable to reach the server. Please check your internet connection or try again later.';
+  }
+
+  return fallback;
+}
+
 interface User {
   _id: string;
   firstName: string;
@@ -87,7 +118,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(user);
       toast.success('Login successful!');
     } catch (error: any) {
-      const message = error.response?.data?.message || 'Login failed';
+      const message = getErrorMessage(error, 'Login failed');
       toast.error(message);
       throw error;
     }
@@ -104,7 +135,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(user);
       toast.success('Registration successful! Your account is pending approval.');
     } catch (error: any) {
-      const message = error.response?.data?.message || 'Registration failed';
+      const message = getErrorMessage(error, 'Registration failed');
       toast.error(message);
       throw error;
     }

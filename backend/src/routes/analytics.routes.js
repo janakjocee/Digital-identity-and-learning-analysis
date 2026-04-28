@@ -380,7 +380,7 @@ router.get('/compare', requireApprovedStudent, asyncHandler(async (req, res) => 
       $group: {
         _id: null,
         averageScore: { $avg: '$score.percentage' },
-        totalQuizzes: { $avg: '$score.percentage' },
+        totalQuizzes: { $sum: 1 },
         averageTime: { $avg: '$timeSpent' }
       }
     }

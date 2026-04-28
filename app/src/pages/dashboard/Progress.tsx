@@ -16,6 +16,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Progress } from '../../components/ui/progress';
 import api from '../../lib/api';
+import { useAuth } from '../../contexts/AuthContext';
 import { formatDate, formatTime } from '../../lib/utils';
 import {
   LineChart,
@@ -30,6 +31,7 @@ import {
 } from 'recharts';
 
 export default function Progress() {
+  const { user } = useAuth();
   const [data, setData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -111,8 +113,8 @@ export default function Progress() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-slate-500">Achievements</p>
-                  <p className="text-2xl font-bold">5</p>
+                  <p className="text-sm text-slate-500">Quizzes Taken</p>
+                  <p className="text-2xl font-bold">{(user as any)?.performanceMetrics?.totalQuizzesTaken ?? scoreTrendData.length}</p>
                 </div>
                 <div className="w-12 h-12 bg-yellow-100 dark:bg-yellow-900/30 rounded-xl flex items-center justify-center">
                   <Award className="w-6 h-6 text-yellow-600" />
@@ -128,7 +130,7 @@ export default function Progress() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-slate-500">Study Streak</p>
-                  <p className="text-2xl font-bold">7 days</p>
+                  <p className="text-2xl font-bold">{(user as any)?.performanceMetrics?.streakDays ?? 0} days</p>
                 </div>
                 <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 rounded-xl flex items-center justify-center">
                   <Calendar className="w-6 h-6 text-orange-600" />
@@ -225,23 +227,23 @@ export default function Progress() {
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <span className="font-medium">Course Completion</span>
-                  <span className="text-sm text-slate-500">65%</span>
+                  <span className="text-sm text-slate-500">{Math.round((user as any)?.performanceMetrics?.completionRate ?? 0)}%</span>
                 </div>
-                <Progress value={65} className="h-2" />
+                <Progress value={(user as any)?.performanceMetrics?.completionRate ?? 0} className="h-2" />
               </div>
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <span className="font-medium">Quiz Mastery</span>
-                  <span className="text-sm text-slate-500">42%</span>
+                  <span className="text-sm text-slate-500">{Math.round((user as any)?.performanceMetrics?.averageQuizScore ?? 0)}%</span>
                 </div>
-                <Progress value={42} className="h-2" />
+                <Progress value={(user as any)?.performanceMetrics?.averageQuizScore ?? 0} className="h-2" />
               </div>
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="font-medium">Study Goals</span>
-                  <span className="text-sm text-slate-500">78%</span>
+                  <span className="font-medium">Overall Score</span>
+                  <span className="text-sm text-slate-500">{Math.round((user as any)?.performanceMetrics?.overallScore ?? 0)}%</span>
                 </div>
-                <Progress value={78} className="h-2" />
+                <Progress value={(user as any)?.performanceMetrics?.overallScore ?? 0} className="h-2" />
               </div>
             </div>
           </CardContent>

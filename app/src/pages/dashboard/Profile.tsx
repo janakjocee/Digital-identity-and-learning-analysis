@@ -12,21 +12,37 @@ import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { useAuth } from '../../contexts/AuthContext';
 import { getClusterLabel, getClusterColor, getRiskColor } from '../../lib/utils';
+import api from '../../lib/api';
+import { toast } from 'sonner';
 
 export default function Profile() {
   const { user, refreshUser } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState({
     firstName: user?.firstName || '',
     lastName: user?.lastName || '',
-    phone: user?.phone || '',
-    address: user?.address || {}
+    phone: (user as any)?.phone || '',
+    dateOfBirth: (user as any)?.dateOfBirth ? new Date((user as any).dateOfBirth).toISOString().split('T')[0] : ''
   });
 
   const handleSave = async () => {
-    // TODO: Implement profile update
-    setIsEditing(false);
-    refreshUser();
+    try {
+      setIsSaving(true);
+      await api.put('/users/profile', {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        phone: formData.phone,
+        dateOfBirth: formData.dateOfBirth || undefined
+      });
+      await refreshUser();
+      setIsEditing(false);
+      toast.success('Profile updated successfully');
+    } catch (error) {
+      toast.error('Failed to update profile');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -92,6 +108,7 @@ export default function Profile() {
               <Button
                 variant="outline"
                 size="sm"
+                disabled={isSaving}
                 onClick={() => isEditing ? handleSave() : setIsEditing(true)}
               >
                 {isEditing ? (
@@ -163,6 +180,8 @@ export default function Profile() {
                   <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <Input
                     type="date"
+                    value={formData.dateOfBirth}
+                    onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
                     disabled={!isEditing}
                     className="pl-10"
                   />

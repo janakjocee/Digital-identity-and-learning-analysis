@@ -70,10 +70,12 @@ interface DashboardData {
 export default function AdminDashboard() {
   const { user } = useAuth();
   const [data, setData] = useState<DashboardData | null>(null);
+  const [analyticsData, setAnalyticsData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     fetchDashboardData();
+    fetchAnalytics();
   }, []);
 
   const fetchDashboardData = async () => {
@@ -84,6 +86,15 @@ export default function AdminDashboard() {
       console.error('Failed to fetch dashboard data:', error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fetchAnalytics = async () => {
+    try {
+      const response = await api.get('/admin/analytics');
+      setAnalyticsData(response.data.data);
+    } catch (error) {
+      console.error('Failed to fetch analytics:', error);
     }
   };
 
@@ -135,23 +146,28 @@ export default function AdminDashboard() {
     { name: 'Quizzes', value: data?.content?.quizzes || 0, icon: FileQuestion },
   ];
 
-  // Mock data for charts
-  const userGrowthData = [
-    { month: 'Jan', users: 120 },
-    { month: 'Feb', users: 180 },
-    { month: 'Mar', users: 250 },
-    { month: 'Apr', users: 320 },
-    { month: 'May', users: 410 },
-    { month: 'Jun', users: 520 },
-  ];
+  // Build chart data from analytics API or fall back to empty arrays
+  const userGrowthData = (analyticsData?.dailyActiveUsers || []).map((d: any) => ({
+    month: d._id,
+    users: d.count
+  }));
 
-  const quizPerformanceData = [
-    { range: '90-100%', count: 45 },
-    { range: '80-89%', count: 78 },
-    { range: '70-79%', count: 62 },
-    { range: '60-69%', count: 38 },
-    { range: 'Below 60%', count: 25 },
-  ];
+  const quizPerformanceData = (() => {
+    const attempts = analyticsData?.quizPerformance || [];
+    const ranges = [
+      { range: '90-100%', min: 90, max: 100, count: 0 },
+      { range: '80-89%', min: 80, max: 89, count: 0 },
+      { range: '70-79%', min: 70, max: 79, count: 0 },
+      { range: '60-69%', min: 60, max: 69, count: 0 },
+      { range: 'Below 60%', min: 0, max: 59, count: 0 }
+    ];
+    attempts.forEach((a: any) => {
+      const score = a.averageScore || 0;
+      const bucket = ranges.find(r => score >= r.min && score <= r.max);
+      if (bucket) bucket.count += a.totalAttempts || 1;
+    });
+    return ranges;
+  })();
 
   const COLORS = ['#22c55e', '#3b82f6', '#f59e0b', '#ef4444', '#6b7280'];
 
