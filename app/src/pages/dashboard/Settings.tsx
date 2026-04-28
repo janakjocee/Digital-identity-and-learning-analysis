@@ -22,10 +22,17 @@ import { Label } from '../../components/ui/label';
 import { Input } from '../../components/ui/input';
 import { useTheme } from '../../contexts/ThemeContext';
 import { toast } from 'sonner';
+import api from '../../lib/api';
 
 export default function Settings() {
   const { theme, toggleTheme } = useTheme();
   const [showPassword, setShowPassword] = useState(false);
+  const [isSavingPassword, setIsSavingPassword] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
   const [notifications, setNotifications] = useState({
     email: true,
     push: false,
@@ -36,6 +43,35 @@ export default function Settings() {
 
   const handleSave = () => {
     toast.success('Settings saved successfully');
+  };
+
+  const handlePasswordChange = async () => {
+    if (!passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
+      toast.error('Please fill in all password fields');
+      return;
+    }
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      toast.error('New passwords do not match');
+      return;
+    }
+    if (passwordForm.newPassword.length < 6) {
+      toast.error('New password must be at least 6 characters');
+      return;
+    }
+    try {
+      setIsSavingPassword(true);
+      await api.post('/auth/change-password', {
+        currentPassword: passwordForm.currentPassword,
+        newPassword: passwordForm.newPassword
+      });
+      toast.success('Password updated successfully');
+      setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    } catch (error: any) {
+      const message = error.response?.data?.message || 'Failed to update password';
+      toast.error(message);
+    } finally {
+      setIsSavingPassword(false);
+    }
   };
 
   return (
@@ -157,6 +193,8 @@ export default function Settings() {
                 <Input
                   type={showPassword ? 'text' : 'password'}
                   placeholder="Enter current password"
+                  value={passwordForm.currentPassword}
+                  onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
                 />
                 <button
                   type="button"
@@ -169,14 +207,28 @@ export default function Settings() {
             </div>
             <div className="space-y-2">
               <Label>New Password</Label>
-              <Input type="password" placeholder="Enter new password" />
+              <Input
+                type="password"
+                placeholder="Enter new password"
+                value={passwordForm.newPassword}
+                onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+              />
             </div>
             <div className="space-y-2">
               <Label>Confirm New Password</Label>
-              <Input type="password" placeholder="Confirm new password" />
+              <Input
+                type="password"
+                placeholder="Confirm new password"
+                value={passwordForm.confirmPassword}
+                onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+              />
             </div>
-            <Button onClick={handleSave} className="bg-gradient-to-r from-blue-600 to-purple-600">
-              Update Password
+            <Button
+              onClick={handlePasswordChange}
+              disabled={isSavingPassword}
+              className="bg-gradient-to-r from-blue-600 to-purple-600"
+            >
+              {isSavingPassword ? 'Updating...' : 'Update Password'}
             </Button>
           </CardContent>
         </Card>

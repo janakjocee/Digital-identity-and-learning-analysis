@@ -8,7 +8,7 @@ const Subject = require('../models/Subject');
 const Chapter = require('../models/Chapter');
 const Module = require('../models/Module');
 const LearningActivity = require('../models/LearningActivity');
-const { authenticate } = require('../middleware/auth.middleware');
+const { authenticate, optionalAuth } = require('../middleware/auth.middleware');
 const { authorize, roles, requireApprovedStudent, authorizeClassAccess } = require('../middleware/role.middleware');
 const { contentValidation, paginationValidation } = require('../middleware/validation.middleware');
 const { asyncHandler } = require('../middleware/error.middleware');
@@ -300,12 +300,5 @@ router.get('/my-content', authenticate, requireApprovedStudent, asyncHandler(asy
     }
   });
 }));
-
-// Helper middleware
-function optionalAuth(req, res, next) {
-  // Implementation would check for token and attach user if present
-  // For now, just continue
-  next();
-}
 
 module.exports = router;
