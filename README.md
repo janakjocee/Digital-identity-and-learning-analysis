@@ -170,6 +170,10 @@ npm --prefix app run dev -- --host 0.0.0.0
 - Backend API: http://localhost:5000
 - AI Service: http://localhost:8000
 
+In GitHub Codespaces, open the forwarded frontend port (`5173`). The frontend
+uses its same-origin `/api` proxy to reach the backend, so you do not need to
+open port `5000` in the browser.
+
 ---
 
 ## 👥 User Roles
