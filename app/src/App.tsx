@@ -21,6 +21,7 @@ import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import NotFound from './pages/NotFound';
+import AccountStatus from './pages/AccountStatus';
 
 // Dashboard Pages
 import StudentDashboard from './pages/dashboard/StudentDashboard';
@@ -57,9 +58,15 @@ function App() {
               <Route path="reset-password" element={<ResetPassword />} />
             </Route>
 
+            <Route path="/account-status" element={
+              <ProtectedRoute>
+                <AccountStatus />
+              </ProtectedRoute>
+            } />
+
             {/* Student Dashboard Routes */}
             <Route path="/dashboard" element={
-              <ProtectedRoute>
+              <ProtectedRoute requireApprovedStudent>
                 <DashboardLayout />
               </ProtectedRoute>
             }>

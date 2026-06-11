@@ -11,6 +11,7 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Checkbox } from '../components/ui/checkbox';
 import { useAuth } from '../contexts/AuthContext';
+import { getUserHomePath } from '../lib/navigation';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -26,8 +27,8 @@ export default function Login() {
     setIsLoading(true);
 
     try {
-      await login(email, password);
-      navigate('/dashboard');
+      const user = await login(email, password);
+      navigate(getUserHomePath(user));
     } catch (error) {
       // Error is handled in auth context
     } finally {

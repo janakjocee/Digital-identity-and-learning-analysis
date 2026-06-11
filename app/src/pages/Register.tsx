@@ -10,6 +10,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { useAuth } from '../contexts/AuthContext';
+import { getUserHomePath } from '../lib/navigation';
 
 /** Returns a human-readable description of which password requirements are unmet. */
 function getPasswordErrors(password: string): string[] {
@@ -66,7 +67,7 @@ export default function Register() {
     setIsLoading(true);
 
     try {
-      await register({
+      const user = await register({
         firstName: formData.firstName,
         lastName: formData.lastName,
         email: formData.email,
@@ -74,7 +75,7 @@ export default function Register() {
         assignedClass: parseInt(formData.assignedClass.toString()),
         dateOfBirth: formData.dateOfBirth || undefined
       });
-      navigate('/dashboard');
+      navigate(getUserHomePath(user));
     } catch (error: any) {
       // The toast is already shown by AuthContext; mirror the message inline
       // so it stays visible even after the toast disappears.

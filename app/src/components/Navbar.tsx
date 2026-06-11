@@ -6,9 +6,10 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, Brain, GraduationCap, BookOpen, Users, MessageSquare, CreditCard } from 'lucide-react';
+import { Menu, X, Brain, GraduationCap, BookOpen, Users, CreditCard } from 'lucide-react';
 import { Button } from './ui/button';
 import { useAuth } from '../contexts/AuthContext';
+import { getUserHomePath } from '../lib/navigation';
 
 const navLinks = [
   { name: 'Features', href: '#features', icon: Brain },
@@ -21,7 +22,7 @@ const navLinks = [
 export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { isAuthenticated } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const location = useLocation();
 
   useEffect(() => {
@@ -91,7 +92,7 @@ export default function Navbar() {
           {/* CTA Buttons */}
           <div className="hidden lg:flex items-center space-x-3">
             {isAuthenticated ? (
-              <Link to="/dashboard">
+              <Link to={getUserHomePath(user)}>
                 <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
                   Dashboard
                 </Button>
@@ -150,7 +151,7 @@ export default function Navbar() {
               ))}
               <div className="pt-4 border-t border-slate-200 dark:border-slate-800 space-y-2">
                 {isAuthenticated ? (
-                  <Link to="/dashboard" className="block w-full">
+                  <Link to={getUserHomePath(user)} className="block w-full">
                     <Button className="w-full bg-gradient-to-r from-blue-600 to-purple-600">
                       Dashboard
                     </Button>
