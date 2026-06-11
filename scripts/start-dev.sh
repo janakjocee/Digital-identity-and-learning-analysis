@@ -13,7 +13,15 @@ command -v docker >/dev/null || {
   exit 1
 }
 
-if [ ! -f backend/.env ] || [ ! -d app/node_modules ] || [ ! -x ai-service/.venv/bin/python ]; then
+dependencies_ready() {
+  [ -f backend/.env ] &&
+  [ -x ai-service/.venv/bin/python ] &&
+  (cd backend && node -e "require.resolve('express')") >/dev/null 2>&1 &&
+  (cd app && node -e "require.resolve('@babel/core'); require.resolve('vite')") >/dev/null 2>&1
+}
+
+if ! dependencies_ready; then
+  echo "Development dependencies are missing or incomplete; reinstalling..."
   bash scripts/setup-dev.sh
 fi
 
@@ -24,6 +32,16 @@ echo "Waiting for MongoDB..."
 until docker compose -f "$COMPOSE_FILE" exec -T mongo mongosh --quiet --eval "db.adminCommand('ping').ok" >/dev/null 2>&1; do
   sleep 2
 done
+
+if grep -Eq '^DEV_ADMIN_EMAIL=.+$' backend/.env &&
+   grep -Eq '^DEV_STUDENT_EMAIL=.+$' backend/.env &&
+   grep -Eq '^DEV_ACCOUNT_PASSWORD=.+$' backend/.env; then
+  echo "Creating or updating configured development accounts..."
+  npm --prefix backend run seed:accounts
+else
+  echo "Development accounts are not configured; signup remains available."
+  echo "Set DEV_ADMIN_EMAIL, DEV_STUDENT_EMAIL, and DEV_ACCOUNT_PASSWORD in backend/.env to seed approved accounts."
+fi
 
 cleanup() {
   trap - EXIT INT TERM
