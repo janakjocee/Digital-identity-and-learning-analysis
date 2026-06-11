@@ -110,61 +110,61 @@ learnsync-ai/
 
 ## 🚀 Quick Start
 
-### Prerequisites
+### Codespaces / Docker Quick Start
 
-- Node.js 18+ 
-- Python 3.9+
-- MongoDB 5.0+
-- Git
-
-### 1. Clone the Repository
+Run these commands from the repository root:
 
 ```bash
-git clone https://github.com/yourusername/learnsync-ai.git
-cd learnsync-ai
+bash scripts/setup-dev.sh
+bash scripts/start-dev.sh
 ```
 
-### 2. Backend Setup
+The start script launches MongoDB with Docker Compose, then starts the backend,
+AI service, and frontend. In a new Codespace, the setup script runs
+automatically. If the Codespace was created before this configuration existed,
+use **Codespaces: Rebuild Container** once.
+
+To stop MongoDB after stopping the development servers:
 
 ```bash
-cd backend
-npm install
-
-# Create .env file
-cp .env.example .env
-
-# Edit .env with your configuration
-# MONGODB_URI=mongodb://localhost:27017/learnsync_ai
-# JWT_SECRET=your_secret_key
-# AI_SERVICE_URL=http://localhost:8000
-
-# Start the server
-npm run dev
+bash scripts/stop-dev.sh
 ```
 
-### 3. AI Service Setup
+### Manual Setup
+
+Always run these commands from the repository root. Start MongoDB first:
 
 ```bash
-cd ../ai-service
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-pip install -r requirements.txt
-
-# Start the AI service
-python main.py
+docker compose -f docker-compose.dev.yml up -d mongo
 ```
 
-### 4. Frontend Setup
+Install dependencies:
 
 ```bash
-cd ../app
-npm install
+cp backend/.env.example backend/.env
+npm install --prefix backend
+npm ci --prefix app
 
-# Start the development server
-npm run dev
+python3 -m venv ai-service/.venv
+ai-service/.venv/bin/python -m pip install -r ai-service/requirements.txt
 ```
 
-### 5. Access the Application
+Start each service in a separate terminal, with every terminal opened at the
+repository root:
+
+```bash
+cd backend && npm run dev
+```
+
+```bash
+cd ai-service && .venv/bin/python main.py
+```
+
+```bash
+npm --prefix app run dev -- --host 0.0.0.0
+```
+
+### Access the Application
 
 - Frontend: http://localhost:5173
 - Backend API: http://localhost:5000
