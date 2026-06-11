@@ -141,7 +141,9 @@ DEV_ACCOUNT_PASSWORD=replace-with-a-strong-password
 DEV_STUDENT_CLASS=8
 ```
 
-With MongoDB running, create or update both approved accounts:
+The development start script creates or updates both approved accounts
+automatically when these values are configured. To run the seeder separately
+with MongoDB already running:
 
 ```bash
 npm --prefix backend run seed:accounts
