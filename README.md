@@ -130,6 +130,33 @@ To stop MongoDB after stopping the development servers:
 bash scripts/stop-dev.sh
 ```
 
+### Create Development Login Accounts
+
+Add the account emails and a password to your local `backend/.env`:
+
+```dotenv
+DEV_ADMIN_EMAIL=admin@example.com
+DEV_STUDENT_EMAIL=student@example.com
+DEV_ACCOUNT_PASSWORD=replace-with-a-strong-password
+DEV_STUDENT_CLASS=8
+```
+
+With MongoDB running, create or update both approved accounts:
+
+```bash
+npm --prefix backend run seed:accounts
+```
+
+The command is idempotent: running it again updates the same accounts and
+resets their password. With the backend running, verify both logins and their
+protected dashboard APIs:
+
+```bash
+npm --prefix backend run verify:accounts
+```
+
+Never commit the real password to Git.
+
 ### Manual Setup
 
 Always run these commands from the repository root. Start MongoDB first:
