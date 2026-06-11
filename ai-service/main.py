@@ -14,7 +14,7 @@ from contextlib import asynccontextmanager
 
 import numpy as np
 import pandas as pd
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -178,6 +178,11 @@ async def root():
             "/comprehensive-analysis"
         ]
     }
+
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    """Avoid a noisy 404 for the browser's automatic favicon request."""
+    return Response(status_code=204)
 
 @app.get("/health")
 async def health_check():

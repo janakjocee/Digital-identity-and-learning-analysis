@@ -14,13 +14,11 @@ import {
   BookOpen
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
-import { Progress } from '../../components/ui/progress';
+import { Progress as ProgressBar } from '../../components/ui/progress';
 import api from '../../lib/api';
 import { useAuth } from '../../contexts/AuthContext';
-import { formatDate, formatTime } from '../../lib/utils';
+import { formatDate } from '../../lib/utils';
 import {
-  LineChart,
-  Line,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -229,21 +227,21 @@ export default function Progress() {
                   <span className="font-medium">Course Completion</span>
                   <span className="text-sm text-slate-500">{Math.round((user as any)?.performanceMetrics?.completionRate ?? 0)}%</span>
                 </div>
-                <Progress value={(user as any)?.performanceMetrics?.completionRate ?? 0} className="h-2" />
+                <ProgressBar value={(user as any)?.performanceMetrics?.completionRate ?? 0} className="h-2" />
               </div>
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <span className="font-medium">Quiz Mastery</span>
                   <span className="text-sm text-slate-500">{Math.round((user as any)?.performanceMetrics?.averageQuizScore ?? 0)}%</span>
                 </div>
-                <Progress value={(user as any)?.performanceMetrics?.averageQuizScore ?? 0} className="h-2" />
+                <ProgressBar value={(user as any)?.performanceMetrics?.averageQuizScore ?? 0} className="h-2" />
               </div>
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <span className="font-medium">Overall Score</span>
                   <span className="text-sm text-slate-500">{Math.round((user as any)?.performanceMetrics?.overallScore ?? 0)}%</span>
                 </div>
-                <Progress value={(user as any)?.performanceMetrics?.overallScore ?? 0} className="h-2" />
+                <ProgressBar value={(user as any)?.performanceMetrics?.overallScore ?? 0} className="h-2" />
               </div>
             </div>
           </CardContent>

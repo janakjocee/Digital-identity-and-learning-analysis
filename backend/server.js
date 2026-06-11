@@ -113,6 +113,9 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Browsers request this automatically; return no content when no icon is configured.
+app.get('/favicon.ico', (req, res) => res.status(204).end());
+
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
