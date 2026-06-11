@@ -92,8 +92,7 @@ subjectSchema.virtual('chapters', {
   foreignField: 'subject'
 });
 
-// Index for efficient queries
-subjectSchema.index({ code: 1 });
+// Indexes for efficient queries
 subjectSchema.index({ classLevels: 1 });
 subjectSchema.index({ isActive: 1 });
 

@@ -190,8 +190,7 @@ userSchema.virtual('isLocked').get(function() {
   return !!(this.lockUntil && this.lockUntil > Date.now());
 });
 
-// Index for efficient queries
-userSchema.index({ email: 1 });
+// Indexes for efficient queries
 userSchema.index({ role: 1, status: 1 });
 userSchema.index({ assignedClass: 1 });
 userSchema.index({ 'performanceMetrics.lastActive': -1 });
