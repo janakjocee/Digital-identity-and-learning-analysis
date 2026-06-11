@@ -11,6 +11,7 @@ const LearningActivity = require('../models/LearningActivity');
 const { authenticate } = require('../middleware/auth.middleware');
 const { roles, requireApprovedStudent } = require('../middleware/role.middleware');
 const { asyncHandler } = require('../middleware/error.middleware');
+const { serializeQuizAttempt } = require('../utils/aiPayload');
 
 const router = express.Router();
 
@@ -49,12 +50,7 @@ router.get('/recommendations', requireApprovedStudent, asyncHandler(async (req, 
     assignedClass: user.assignedClass,
     learningProfile: user.learningProfile,
     performanceMetrics: user.performanceMetrics,
-    recentAttempts: recentAttempts.map(a => ({
-      quizId: a.quiz._id.toString(),
-      score: a.score.percentage,
-      subject: a.quiz.subject?.toString(),
-      completedAt: a.completedAt
-    })),
+    recentAttempts: recentAttempts.map(serializeQuizAttempt),
     recentActivity: recentActivity.map(a => ({
       type: a.activityType,
       timestamp: a.timestamp,
@@ -109,12 +105,7 @@ router.get('/predict-performance', requireApprovedStudent, asyncHandler(async (r
   // Prepare data for AI service
   const predictionData = {
     studentId: userId.toString(),
-    quizHistory: quizHistory.map(q => ({
-      score: q.score.percentage,
-      subject: q.quiz.subject?.toString(),
-      difficulty: q.quiz.difficulty,
-      completedAt: q.completedAt
-    })),
+    quizHistory: quizHistory.map(serializeQuizAttempt),
     currentMetrics: req.user.performanceMetrics
   };
   
@@ -296,10 +287,7 @@ router.get('/learning-cluster', requireApprovedStudent, asyncHandler(async (req,
   const clusterData = {
     studentId: userId.toString(),
     performanceMetrics: user.performanceMetrics,
-    quizHistory: quizHistory.map(q => ({
-      score: q.score.percentage,
-      completedAt: q.completedAt
-    })),
+    quizHistory: quizHistory.map(serializeQuizAttempt),
     activityPattern
   };
   
@@ -383,10 +371,7 @@ router.post('/analyze-all/:studentId', roles.admin, asyncHandler(async (req, res
     studentId: studentId.toString(),
     assignedClass: student.assignedClass,
     performanceMetrics: student.performanceMetrics,
-    quizHistory: quizHistory.map(q => ({
-      score: q.score.percentage,
-      completedAt: q.completedAt
-    })),
+    quizHistory: quizHistory.map(serializeQuizAttempt),
     activityData: activityData.map(a => ({
       type: a.activityType,
       timestamp: a.timestamp,
@@ -458,10 +443,7 @@ router.post('/batch-analyze', roles.admin, asyncHandler(async (req, res) => {
         
         const analysisData = {
           studentId: student._id.toString(),
-          quizHistory: quizHistory.map(q => ({
-            score: q.score.percentage,
-            completedAt: q.completedAt
-          }))
+          quizHistory: quizHistory.map(serializeQuizAttempt)
         };
         
         const aiResponse = await axios.post(
