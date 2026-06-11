@@ -9,10 +9,11 @@ import { Loader2 } from 'lucide-react';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
+  requireApprovedStudent?: boolean;
 }
 
-export default function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { isAuthenticated, isLoading } = useAuth();
+export default function ProtectedRoute({ children, requireApprovedStudent = false }: ProtectedRouteProps) {
+  const { user, isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) {
     return (
@@ -24,6 +25,15 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
+  }
+
+  if (requireApprovedStudent) {
+    if (user?.role !== 'student') {
+      return <Navigate to="/admin" replace />;
+    }
+    if (user.status !== 'approved') {
+      return <Navigate to="/account-status" replace />;
+    }
   }
 
   return <>{children}</>;

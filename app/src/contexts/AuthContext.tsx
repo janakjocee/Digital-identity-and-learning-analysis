@@ -3,7 +3,7 @@
  * Manages user authentication state and operations
  */
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { toast } from 'sonner';
 import api from '../lib/api';
 
@@ -38,7 +38,7 @@ function getErrorMessage(error: any, fallback: string): string {
   return fallback;
 }
 
-interface User {
+export interface User {
   _id: string;
   firstName: string;
   lastName: string;
@@ -64,8 +64,8 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  register: (data: RegisterData) => Promise<void>;
+  login: (email: string, password: string) => Promise<User>;
+  register: (data: RegisterData) => Promise<User>;
   logout: () => void;
   refreshUser: () => Promise<void>;
 }
@@ -117,6 +117,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       setUser(user);
       toast.success('Login successful!');
+      return user;
     } catch (error: any) {
       const message = getErrorMessage(error, 'Login failed');
       toast.error(message);
@@ -134,6 +135,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       setUser(user);
       toast.success('Registration successful! Your account is pending approval.');
+      return user;
     } catch (error: any) {
       const message = getErrorMessage(error, 'Registration failed');
       toast.error(message);

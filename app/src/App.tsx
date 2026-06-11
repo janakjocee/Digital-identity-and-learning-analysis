@@ -5,7 +5,7 @@
  * @author Janak Raj Joshi
  */
 
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { AuthProvider } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -19,6 +19,7 @@ import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import NotFound from './pages/NotFound';
+import AccountStatus from './pages/AccountStatus';
 
 // Dashboard Pages
 import StudentDashboard from './pages/dashboard/StudentDashboard';
@@ -53,9 +54,15 @@ function App() {
               <Route path="register" element={<Register />} />
             </Route>
 
+            <Route path="/account-status" element={
+              <ProtectedRoute>
+                <AccountStatus />
+              </ProtectedRoute>
+            } />
+
             {/* Student Dashboard Routes */}
             <Route path="/dashboard" element={
-              <ProtectedRoute>
+              <ProtectedRoute requireApprovedStudent>
                 <DashboardLayout />
               </ProtectedRoute>
             }>
