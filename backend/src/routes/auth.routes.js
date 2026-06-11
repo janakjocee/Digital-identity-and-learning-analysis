@@ -296,7 +296,7 @@ router.post('/forgot-password', authValidation.forgotPassword, asyncHandler(asyn
     ...(process.env.NODE_ENV !== 'production' && {
       devInfo: {
         resetToken,
-        resetUrl: `${req.protocol}://${req.get('host')}/reset-password?token=${resetToken}`
+        resetUrl: `${(process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, '')}/reset-password?token=${resetToken}`
       }
     })
   });
