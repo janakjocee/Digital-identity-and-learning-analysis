@@ -6,7 +6,7 @@ const {
   connectDB,
   getMissingEnvironment,
   seedConfiguredAccounts
-} = require('learnsync-ai-backend');
+} = require('../server/app');
 
 let accountsSeeded = false;
 

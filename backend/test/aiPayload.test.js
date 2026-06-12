@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { serializeQuizAttempt } = require('../src/utils/aiPayload');
+const { serializeQuizAttempt } = require('../../app/server/src/utils/aiPayload');
 
 test('serializes a populated quiz attempt for the AI service contract', () => {
   const completedAt = new Date('2026-06-11T10:00:00.000Z');

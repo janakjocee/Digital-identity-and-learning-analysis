@@ -2,7 +2,8 @@ const { after, before, test } = require('node:test');
 const assert = require('node:assert/strict');
 const { spawn } = require('node:child_process');
 const { MongoMemoryServer } = require('mongodb-memory-server');
-const mongoose = require('mongoose');
+const User = require('../../app/server/src/models/User');
+const mongoose = User.db.base;
 
 const PORT = 5511;
 const API_URL = `http://127.0.0.1:${PORT}/api`;
@@ -33,8 +34,6 @@ before(async () => {
   const mongoUri = mongo.getUri('learnsync_auth_test');
 
   await mongoose.connect(mongoUri);
-  const User = require('../src/models/User');
-
   await User.create([
     {
       firstName: 'Admin',
