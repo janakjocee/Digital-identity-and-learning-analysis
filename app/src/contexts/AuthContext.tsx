@@ -20,6 +20,12 @@ function getErrorMessage(error: any, fallback: string): string {
   // Server responded with an error status
   if (error.response) {
     const data = error.response.data;
+    if (error.response.status === 404 || error.response.status === 405) {
+      return 'The backend API is not deployed for this website. Please check the deployment configuration.';
+    }
+    if (error.response.status === 503 && data?.missingEnvironment?.length) {
+      return `The backend is missing configuration: ${data.missingEnvironment.join(', ')}`;
+    }
     // Show the first field-level validation error if available
     if (data?.errors?.length) {
       return data.errors[0].message as string;

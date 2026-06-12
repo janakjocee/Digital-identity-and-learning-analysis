@@ -159,6 +159,34 @@ npm --prefix backend run verify:accounts
 
 Never commit the real password to Git.
 
+### Production Deployment
+
+The `app` Vercel project includes the same Express backend under `/api`. Configure
+these encrypted environment variables for Production and Preview deployments:
+
+```dotenv
+MONGODB_URI=mongodb+srv://...
+JWT_SECRET=replace-with-a-long-random-secret
+JWT_REFRESH_SECRET=replace-with-a-different-long-random-secret
+DEV_ADMIN_EMAIL=admin@example.com
+DEV_STUDENT_EMAIL=student@example.com
+DEV_ACCOUNT_PASSWORD=replace-with-a-strong-password
+DEV_STUDENT_CLASS=8
+```
+
+The API creates or updates the configured approved accounts on its first request.
+Because the frontend consumes the backend as a local workspace package, enable
+**Include source files outside of the Root Directory in the Build Step** for the
+Vercel project whose Root Directory is `app`.
+
+After deploying, verify the production API before trying the login form:
+
+```bash
+curl https://your-domain.example/api/health
+```
+
+The response must report `"success": true` and `"database": "connected"`.
+
 ### Manual Setup
 
 Always run these commands from the repository root. Start MongoDB first:

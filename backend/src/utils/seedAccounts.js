@@ -11,18 +11,7 @@ const requiredEnvironment = [
   'DEV_ACCOUNT_PASSWORD'
 ];
 
-const missingEnvironment = requiredEnvironment.filter((name) => !process.env[name]);
-
-if (missingEnvironment.length > 0) {
-  console.error(`Missing required environment variables: ${missingEnvironment.join(', ')}`);
-  console.error('Set them in backend/.env or pass them to the seed command.');
-  process.exit(1);
-}
-
-if (process.env.DEV_ACCOUNT_PASSWORD.length < 8) {
-  console.error('DEV_ACCOUNT_PASSWORD must be at least 8 characters.');
-  process.exit(1);
-}
+const getMissingEnvironment = () => requiredEnvironment.filter((name) => !process.env[name]);
 
 const upsertAccount = async ({ email, firstName, lastName, role, assignedClass }) => {
   let user = await User.findOne({ email }).select('+password');
@@ -53,10 +42,25 @@ const upsertAccount = async ({ email, firstName, lastName, role, assignedClass }
   console.log(`${action}: ${email} (${role}, approved)`);
 };
 
-const seedAccounts = async () => {
-  try {
-    await mongoose.connect(process.env.MONGODB_URI);
+const seedConfiguredAccounts = async ({ connect = true, required = true } = {}) => {
+  const missingEnvironment = getMissingEnvironment();
+  if (missingEnvironment.length > 0) {
+    if (required) {
+      throw new Error(`Missing required environment variables: ${missingEnvironment.join(', ')}`);
+    }
+    return false;
+  }
 
+  if (process.env.DEV_ACCOUNT_PASSWORD.length < 8) {
+    throw new Error('DEV_ACCOUNT_PASSWORD must be at least 8 characters.');
+  }
+
+  const openedConnection = connect && mongoose.connection.readyState !== 1;
+  if (openedConnection) {
+    await mongoose.connect(process.env.MONGODB_URI);
+  }
+
+  try {
     await upsertAccount({
       email: process.env.DEV_ADMIN_EMAIL.toLowerCase(),
       firstName: process.env.DEV_ADMIN_FIRST_NAME || 'Janak',
@@ -72,13 +76,21 @@ const seedAccounts = async () => {
       assignedClass: Number(process.env.DEV_STUDENT_CLASS || 8)
     });
 
-    console.log('Development accounts are ready.');
-  } catch (error) {
-    console.error(`Failed to seed development accounts: ${error.message}`);
-    process.exitCode = 1;
+    console.log('Configured accounts are ready.');
+    return true;
   } finally {
-    await mongoose.disconnect();
+    if (openedConnection) {
+      await mongoose.disconnect();
+    }
   }
 };
 
-seedAccounts();
+if (require.main === module) {
+  seedConfiguredAccounts()
+    .catch((error) => {
+      console.error(`Failed to seed development accounts: ${error.message}`);
+      process.exitCode = 1;
+    });
+}
+
+module.exports = { seedConfiguredAccounts };
