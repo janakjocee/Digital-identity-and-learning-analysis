@@ -1,12 +1,11 @@
-import { createRequire } from 'node:module';
+import backend from '../server/app.js';
 
-const require = createRequire(import.meta.url);
 const {
   app,
   connectDB,
   getMissingEnvironment,
   seedConfiguredAccounts
-} = require('../server/app');
+} = backend;
 
 let accountsSeeded = false;
 
