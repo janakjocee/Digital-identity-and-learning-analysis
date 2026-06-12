@@ -161,7 +161,7 @@ Never commit the real password to Git.
 
 ### Production Deployment
 
-The `app` Vercel project includes the same Express backend under `/api`. Configure
+The `app` Vercel project includes the Express backend under `/api`. Configure
 these encrypted environment variables for Production and Preview deployments:
 
 ```dotenv
@@ -175,9 +175,6 @@ DEV_STUDENT_CLASS=8
 ```
 
 The API creates or updates the configured approved accounts on its first request.
-Because the frontend consumes the backend as a local workspace package, enable
-**Include source files outside of the Root Directory in the Build Step** for the
-Vercel project whose Root Directory is `app`.
 
 After deploying, verify the production API before trying the login form:
 
