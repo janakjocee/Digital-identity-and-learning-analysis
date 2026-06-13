@@ -111,8 +111,8 @@ export default function Progress() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-slate-500">Quizzes Taken</p>
-                  <p className="text-2xl font-bold">{(user as any)?.performanceMetrics?.totalQuizzesTaken ?? scoreTrendData.length}</p>
+                  <p className="text-sm text-slate-500">Average Quiz Score</p>
+                  <p className="text-2xl font-bold">{Math.round((user as any)?.performanceMetrics?.averageQuizScore ?? 0)}%</p>
                 </div>
                 <div className="w-12 h-12 bg-yellow-100 dark:bg-yellow-900/30 rounded-xl flex items-center justify-center">
                   <Award className="w-6 h-6 text-yellow-600" />

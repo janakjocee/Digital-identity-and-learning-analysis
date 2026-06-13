@@ -18,6 +18,7 @@ import { Button } from '../../components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import api from '../../lib/api';
 import { formatTime, getScoreColor } from '../../lib/utils';
+import { toast } from 'sonner';
 import {
   LineChart,
   Line,
@@ -48,8 +49,11 @@ export default function Analytics() {
 
   const fetchAnalytics = async () => {
     try {
-      const response = await api.get('/analytics/overview');
-      setData(response.data.data);
+      const [overviewResponse, subjectResponse] = await Promise.all([
+        api.get('/analytics/overview'),
+        api.get('/analytics/subjects')
+      ]);
+      setData({ ...overviewResponse.data.data, subjects: subjectResponse.data.data.subjects });
     } catch (error) {
       console.error('Failed to fetch analytics:', error);
     } finally {
@@ -68,6 +72,22 @@ export default function Analytics() {
   const scoreTrendData = data?.scoreTrend || [];
   const dailyActivityData = data?.dailyActivity || [];
   const subjectData = data?.subjects || [];
+  const exportReport = () => {
+    const rows = [
+      ['Metric', 'Value'],
+      ['Total Quizzes', data?.overall?.totalQuizzes || 0],
+      ['Average Score', Math.round(data?.overall?.averageScore || 0)],
+      ['Highest Score', Math.round(data?.overall?.highestScore || 0)],
+      ...subjectData.map((subject: any) => [`${subject.subjectName} average`, Math.round(subject.averageScore || 0)])
+    ];
+    const blob = new Blob([rows.map((row) => row.join(',')).join('\n')], { type: 'text/csv;charset=utf-8' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'student-learning-report.csv';
+    link.click();
+    URL.revokeObjectURL(link.href);
+    toast.success('Learning report downloaded');
+  };
 
   const COLORS = ['#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
@@ -84,7 +104,7 @@ export default function Analytics() {
             Detailed insights into your learning progress
           </p>
         </div>
-        <Button variant="outline">
+        <Button variant="outline" onClick={exportReport}>
           <Download className="w-4 h-4 mr-2" />
           Export Report
         </Button>

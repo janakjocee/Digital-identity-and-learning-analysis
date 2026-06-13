@@ -184,9 +184,11 @@ export default function AdminDashboard() {
           </p>
         </div>
         <div className="flex items-center space-x-3">
-          <Button variant="outline">
-            <Clock className="w-4 h-4 mr-2" />
-            View Reports
+          <Button variant="outline" asChild>
+            <Link to="/admin/reports">
+              <Clock className="w-4 h-4 mr-2" />
+              View Reports
+            </Link>
           </Button>
           <Link to="/admin/students">
             <Button className="bg-gradient-to-r from-blue-600 to-purple-600">
@@ -205,7 +207,7 @@ export default function AdminDashboard() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.1 }}
           >
-            <Card className="group cursor-pointer hover:shadow-lg transition-shadow">
+            <Card className="group cursor-pointer hover:shadow-lg transition-shadow" onClick={() => stat.link && (window.location.href = stat.link)}>
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>

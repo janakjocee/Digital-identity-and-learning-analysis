@@ -17,6 +17,10 @@ interface Quiz {
   subject?: { name: string };
   userAttempt?: { status: string; score: number };
 }
+interface AttemptResult {
+  score?: { percentage?: number };
+  results?: { passed?: boolean; correctCount?: number; incorrectCount?: number };
+}
 
 export default function Quizzes() {
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
@@ -25,6 +29,7 @@ export default function Quizzes() {
   const [attemptId, setAttemptId] = useState('');
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [result, setResult] = useState<{ score: { percentage: number }; passed: boolean } | null>(null);
+  const [reviewResult, setReviewResult] = useState<AttemptResult | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchQuizzes = async () => {
@@ -51,6 +56,18 @@ export default function Quizzes() {
       setResult(null);
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Unable to start quiz');
+    }
+  };
+
+  const reviewQuiz = async (quizId: string) => {
+    try {
+      const { data: quizData } = await api.get(`/quizzes/${quizId}`);
+      const completedAttempt = quizData.data.attempts.find((attempt: any) => attempt.status === 'completed');
+      if (!completedAttempt) return toast.error('No completed attempt is available to review');
+      const { data } = await api.get(`/quizzes/attempts/${completedAttempt.id}`);
+      setReviewResult(data.data.attempt);
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Unable to review quiz result');
     }
   };
 
@@ -96,7 +113,10 @@ export default function Quizzes() {
               <div className="flex items-start justify-between"><div className="rounded-xl bg-blue-100 p-3 dark:bg-blue-900/30"><FileQuestion className="text-blue-600" /></div><Badge>{quiz.subject?.name || `${quiz.questionCount} questions`}</Badge></div>
               <h3 className="mt-4 font-bold">{quiz.title}</h3><p className="mt-1 text-sm text-slate-500">{quiz.description}</p>
               <div className="my-4 flex justify-between text-sm text-slate-500"><span className="flex gap-1"><Clock className="w-4 h-4" />{quiz.settings.timeLimit || 'Unlimited'} min</span><span>Pass {quiz.settings.passingScore}%</span></div>
-              <Button className="w-full" onClick={() => startQuiz(quiz._id)}><Play className="mr-2 w-4 h-4" />{quiz.userAttempt?.status === 'completed' ? `Review score: ${quiz.userAttempt.score}%` : 'Start quiz'}</Button>
+              <Button className="w-full" onClick={() => quiz.userAttempt?.status === 'completed' ? reviewQuiz(quiz._id) : startQuiz(quiz._id)}>
+                {quiz.userAttempt?.status === 'completed' ? <Trophy className="mr-2 w-4 h-4" /> : <Play className="mr-2 w-4 h-4" />}
+                {quiz.userAttempt?.status === 'completed' ? `Review score: ${quiz.userAttempt.score}%` : 'Start quiz'}
+              </Button>
             </CardContent>
           </Card>
         ))}
@@ -131,6 +151,22 @@ export default function Quizzes() {
               <Button className="w-full" onClick={submitQuiz}><CheckCircle className="mr-2 w-4 h-4" />Submit quiz</Button>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={Boolean(reviewResult)} onOpenChange={(open) => !open && setReviewResult(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Quiz result</DialogTitle></DialogHeader>
+          <div className="py-6 text-center">
+            <Trophy className="mx-auto h-16 w-16 text-amber-500" />
+            <p className="mt-4 text-4xl font-bold">{Math.round(reviewResult?.score?.percentage || 0)}%</p>
+            <p className="mt-2 font-medium">{reviewResult?.results?.passed ? 'Passed' : 'More practice recommended'}</p>
+            <div className="mt-5 grid grid-cols-2 gap-3 text-sm">
+              <div className="rounded-lg bg-green-50 p-3 dark:bg-green-900/20"><p className="text-slate-500">Correct</p><p className="text-xl font-bold text-green-600">{reviewResult?.results?.correctCount || 0}</p></div>
+              <div className="rounded-lg bg-red-50 p-3 dark:bg-red-900/20"><p className="text-slate-500">Incorrect</p><p className="text-xl font-bold text-red-600">{reviewResult?.results?.incorrectCount || 0}</p></div>
+            </div>
+            <Button className="mt-6" onClick={() => setReviewResult(null)}>Close result</Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
