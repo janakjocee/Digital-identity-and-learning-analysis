@@ -20,6 +20,7 @@ export default function Content() {
   const [modules, setModules] = useState<ModuleSummary[]>([]);
   const [completedIds, setCompletedIds] = useState<string[]>([]);
   const [activeModule, setActiveModule] = useState<ModuleDetail | null>(null);
+  const [selectedSubjectId, setSelectedSubjectId] = useState('all');
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchContent = async () => {
@@ -63,6 +64,9 @@ export default function Content() {
     () => modules.find((item) => !completedIds.includes(item._id)) || modules[0],
     [modules, completedIds]
   );
+  const visibleChapters = selectedSubjectId === 'all'
+    ? chapters
+    : chapters.filter((chapter) => chapter.subject?._id === selectedSubjectId);
 
   if (isLoading) return <div className="flex h-96 items-center justify-center"><div className="h-12 w-12 animate-spin rounded-full border-b-2 border-blue-600" /></div>;
 
@@ -75,22 +79,35 @@ export default function Content() {
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {subjects.map((subject) => (
-          <Card key={subject._id}>
+          <Card
+            key={subject._id}
+            role="button"
+            tabIndex={0}
+            className={`cursor-pointer transition-all hover:-translate-y-0.5 hover:shadow-md ${selectedSubjectId === subject._id ? 'ring-2 ring-blue-500' : ''}`}
+            onClick={() => setSelectedSubjectId((current) => current === subject._id ? 'all' : subject._id)}
+            onKeyDown={(event) => event.key === 'Enter' && setSelectedSubjectId((current) => current === subject._id ? 'all' : subject._id)}
+          >
             <CardContent className="p-6">
               <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-4" style={{ backgroundColor: `${subject.color}20` }}>
                 <GraduationCap className="w-6 h-6" style={{ color: subject.color }} />
               </div>
               <h3 className="font-bold">{subject.name}</h3>
               <p className="text-sm text-slate-500">{chapters.filter((c) => c.subject?._id === subject._id).length} chapter</p>
+              <p className="mt-3 text-xs font-medium text-blue-600">{selectedSubjectId === subject._id ? 'Showing lessons - click to clear' : 'Open subject lessons'}</p>
             </CardContent>
           </Card>
         ))}
       </div>
 
       <Card>
-        <CardHeader><CardTitle>Chapters and lessons</CardTitle></CardHeader>
+        <CardHeader>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <CardTitle>Chapters and lessons</CardTitle>
+            {selectedSubjectId !== 'all' && <Button variant="outline" size="sm" onClick={() => setSelectedSubjectId('all')}>Show all subjects</Button>}
+          </div>
+        </CardHeader>
         <CardContent className="space-y-4">
-          {chapters.map((chapter) => {
+          {visibleChapters.map((chapter) => {
             const chapterModules = modules.filter((item) => item.chapter === chapter._id);
             return (
               <div key={chapter._id} className="rounded-xl border p-4">
@@ -116,6 +133,7 @@ export default function Content() {
               </div>
             );
           })}
+          {visibleChapters.length === 0 && <p className="py-8 text-center text-slate-500">No published lessons are available for this subject yet.</p>}
         </CardContent>
       </Card>
 

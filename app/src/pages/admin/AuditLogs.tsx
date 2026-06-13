@@ -21,65 +21,7 @@ import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Badge } from '../../components/ui/badge';
 import { toast } from 'sonner';
-
-// Mock audit logs data
-const mockLogs = [
-  {
-    id: '1',
-    user: { firstName: 'Admin', lastName: 'User', email: 'admin@example.com', role: 'admin' },
-    action: 'user_approve',
-    entityType: 'user',
-    entityName: 'John Doe',
-    description: 'Approved student registration',
-    status: 'success',
-    timestamp: new Date(Date.now() - 1000 * 60 * 5).toISOString(),
-    ipAddress: '192.168.1.1'
-  },
-  {
-    id: '2',
-    user: { firstName: 'Admin', lastName: 'User', email: 'admin@example.com', role: 'admin' },
-    action: 'content_create',
-    entityType: 'subject',
-    entityName: 'Advanced Mathematics',
-    description: 'Created new subject',
-    status: 'success',
-    timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
-    ipAddress: '192.168.1.1'
-  },
-  {
-    id: '3',
-    user: { firstName: 'System', lastName: '', email: 'system@learnsync.ai', role: 'system' },
-    action: 'login',
-    entityType: 'user',
-    entityName: 'Sarah Johnson',
-    description: 'User logged in successfully',
-    status: 'success',
-    timestamp: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
-    ipAddress: '10.0.0.5'
-  },
-  {
-    id: '4',
-    user: { firstName: 'Student', lastName: 'User', email: 'student@example.com', role: 'student' },
-    action: 'quiz_complete',
-    entityType: 'quiz',
-    entityName: 'Algebra Basics',
-    description: 'Completed quiz with score 85%',
-    status: 'success',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60).toISOString(),
-    ipAddress: '10.0.0.8'
-  },
-  {
-    id: '5',
-    user: { firstName: 'Admin', lastName: 'User', email: 'admin@example.com', role: 'admin' },
-    action: 'user_suspend',
-    entityType: 'user',
-    entityName: 'Test User',
-    description: 'Suspended user account',
-    status: 'success',
-    timestamp: new Date(Date.now() - 1000 * 60 * 120).toISOString(),
-    ipAddress: '192.168.1.1'
-  }
-];
+import api from '../../lib/api';
 
 const getActionColor = (action: string) => {
   if (action.includes('approve')) return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400';
@@ -100,14 +42,20 @@ const formatDate = (date: string) => {
 };
 
 export default function AuditLogs() {
-  const [logs, setLogs] = useState(mockLogs);
+  const [logs, setLogs] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState('all');
 
+  useEffect(() => {
+    api.get('/admin/audit-logs?limit=100')
+      .then((response) => setLogs(response.data.data.logs))
+      .catch(() => toast.error('Unable to load audit logs'));
+  }, []);
+
   const filteredLogs = logs.filter(log => {
     const matchesSearch =
-      log.user.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      log.user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (log.user?.firstName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (log.user?.email || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
       log.action.toLowerCase().includes(searchQuery.toLowerCase()) ||
       log.description.toLowerCase().includes(searchQuery.toLowerCase());
     
@@ -117,7 +65,15 @@ export default function AuditLogs() {
   });
 
   const handleExport = () => {
-    toast.success('Audit logs exported successfully');
+    const header = ['Time', 'User', 'Action', 'Description', 'Entity', 'Status'];
+    const rows = filteredLogs.map((log) => [log.timestamp, log.user?.email || 'Unknown', log.action, log.description, log.entityName || log.entityType || '', log.status]);
+    const blob = new Blob([[header, ...rows].map((row) => row.map((value) => `"${String(value).replaceAll('"', '""')}"`).join(',')).join('\n')], { type: 'text/csv;charset=utf-8' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'audit-logs.csv';
+    link.click();
+    URL.revokeObjectURL(link.href);
+    toast.success('Audit logs downloaded');
   };
 
   return (
@@ -188,7 +144,7 @@ export default function AuditLogs() {
               <tbody>
                 {filteredLogs.map((log, idx) => (
                   <motion.tr
-                    key={log.id}
+                    key={log._id}
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: idx * 0.03 }}
@@ -198,12 +154,12 @@ export default function AuditLogs() {
                       <div className="flex items-center space-x-3">
                         <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
                           <span className="text-white text-xs font-semibold">
-                            {log.user.firstName[0]}{log.user.lastName[0]}
+                            {log.user?.firstName?.[0] || '?'}{log.user?.lastName?.[0] || ''}
                           </span>
                         </div>
                         <div>
-                          <p className="font-medium text-sm">{log.user.firstName} {log.user.lastName}</p>
-                          <p className="text-xs text-slate-500">{log.user.role}</p>
+                          <p className="font-medium text-sm">{log.user?.firstName || 'Unknown'} {log.user?.lastName || ''}</p>
+                          <p className="text-xs text-slate-500">{log.user?.role || log.userRole}</p>
                         </div>
                       </div>
                     </td>

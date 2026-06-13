@@ -4,6 +4,7 @@
  */
 
 import { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   TrendingUp,
@@ -67,6 +68,7 @@ interface DashboardData {
 }
 
 export default function StudentDashboard() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [data, setData] = useState<DashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -156,7 +158,7 @@ export default function StudentDashboard() {
               <span className="text-sm font-medium">Account pending approval</span>
             </div>
           )}
-          <Button variant="outline" className="hidden sm:flex">
+          <Button variant="outline" className="hidden sm:flex" onClick={() => navigate('/dashboard/content')}>
             <Calendar className="w-4 h-4 mr-2" />
             View Schedule
           </Button>
@@ -345,6 +347,7 @@ export default function StudentDashboard() {
                 {data?.aiInsights?.recommendations?.slice(0, 4).map((rec: any, idx: number) => (
                   <div
                     key={idx}
+                    onClick={() => navigate('/dashboard/content')}
                     className="flex items-start space-x-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
                   >
                     <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -379,9 +382,11 @@ export default function StudentDashboard() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Recent Quizzes</CardTitle>
-            <Button variant="ghost" size="sm">
-              View All
-              <ChevronRight className="w-4 h-4 ml-1" />
+            <Button variant="ghost" size="sm" asChild>
+              <Link to="/dashboard/quizzes">
+                View All
+                <ChevronRight className="w-4 h-4 ml-1" />
+              </Link>
             </Button>
           </CardHeader>
           <CardContent>

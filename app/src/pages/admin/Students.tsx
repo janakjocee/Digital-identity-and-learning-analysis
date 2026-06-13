@@ -4,12 +4,10 @@
  */
 
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   Users,
   Search,
-  Filter,
   CheckCircle,
   XCircle,
   UserCheck,
@@ -24,6 +22,7 @@ import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Badge } from '../../components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -58,7 +57,8 @@ export default function Students() {
   const [pendingStudents, setPendingStudents] = useState<Student[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [selectedStudent, setSelectedStudent] = useState<any>(null);
 
   useEffect(() => {
     fetchStudents();
@@ -96,11 +96,30 @@ export default function Students() {
     }
   };
 
+  const viewDetails = async (id: string) => {
+    try {
+      const response = await api.get(`/admin/students/${id}/details`);
+      setSelectedStudent(response.data.data);
+    } catch {
+      toast.error('Unable to load student details');
+    }
+  };
+
+  const suspendStudent = async (id: string) => {
+    try {
+      await api.post('/admin/students/bulk-action', { userIds: [id], action: 'suspend' });
+      toast.success('Student suspended');
+      await fetchStudents();
+    } catch {
+      toast.error('Unable to suspend student');
+    }
+  };
+
   const filteredStudents = students.filter(s =>
     s.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
     s.lastName.toLowerCase().includes(searchQuery.toLowerCase()) ||
     s.email.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  ).filter((student) => statusFilter === 'all' || student.status === statusFilter);
 
   if (isLoading) {
     return (
@@ -133,10 +152,9 @@ export default function Students() {
               className="pl-10 w-64"
             />
           </div>
-          <Button variant="outline">
-            <Filter className="w-4 h-4 mr-2" />
-            Filter
-          </Button>
+          <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className="h-10 rounded-md border bg-background px-3">
+            <option value="all">All statuses</option><option value="approved">Approved</option><option value="pending">Pending</option><option value="rejected">Rejected</option>
+          </select>
         </div>
       </div>
 
@@ -256,9 +274,8 @@ export default function Students() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem>View Details</DropdownMenuItem>
-                              <DropdownMenuItem>Edit</DropdownMenuItem>
-                              <DropdownMenuItem className="text-red-600">Suspend</DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => viewDetails(student._id)}>View Details</DropdownMenuItem>
+                              <DropdownMenuItem className="text-red-600" onClick={() => suspendStudent(student._id)}>Suspend</DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </td>
@@ -330,6 +347,23 @@ export default function Students() {
           </div>
         </TabsContent>
       </Tabs>
+
+      <Dialog open={Boolean(selectedStudent)} onOpenChange={(open) => !open && setSelectedStudent(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader><DialogTitle>Student live record</DialogTitle></DialogHeader>
+          {selectedStudent && (
+            <div className="space-y-5">
+              <div><p className="text-lg font-bold">{selectedStudent.student.firstName} {selectedStudent.student.lastName}</p><p className="text-sm text-slate-500">{selectedStudent.student.email} · Class {selectedStudent.student.assignedClass}</p></div>
+              <div className="grid grid-cols-3 gap-3 text-center">
+                <div className="rounded-lg border p-3"><p className="text-xl font-bold">{Math.round(selectedStudent.student.performanceMetrics?.averageQuizScore || 0)}%</p><p className="text-xs text-slate-500">Average score</p></div>
+                <div className="rounded-lg border p-3"><p className="text-xl font-bold">{selectedStudent.student.performanceMetrics?.completionRate || 0}%</p><p className="text-xs text-slate-500">Completion</p></div>
+                <div className="rounded-lg border p-3"><p className="text-xl font-bold">{selectedStudent.recentQuizzes.length}</p><p className="text-xs text-slate-500">Recent quizzes</p></div>
+              </div>
+              <div><h3 className="font-semibold">Recent learning activity</h3><div className="mt-2 max-h-60 space-y-2 overflow-y-auto">{selectedStudent.recentActivity.map((activity: any) => <div key={activity._id} className="rounded-lg bg-slate-50 p-3 text-sm dark:bg-slate-800"><span className="font-medium">{activity.details?.title || activity.activityType}</span><span className="float-right text-xs text-slate-500">{new Date(activity.timestamp).toLocaleDateString()}</span></div>)}{selectedStudent.recentActivity.length === 0 && <p className="text-sm text-slate-500">No learning activity yet.</p>}</div></div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
