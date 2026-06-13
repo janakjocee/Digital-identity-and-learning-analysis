@@ -110,9 +110,10 @@ router.post('/register', authValidation.register, asyncHandler(async (req, res) 
  */
 router.post('/login', authValidation.login, asyncHandler(async (req, res) => {
   const { email, password, portal } = req.body;
+  const normalizedEmail = email.trim().toLowerCase();
   
   // Find user with password
-  const user = await User.findOne({ email }).select('+password');
+  const user = await User.findOne({ email: normalizedEmail }).select('+password');
   
   if (!user) {
     return res.status(401).json({

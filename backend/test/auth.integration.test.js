@@ -141,6 +141,16 @@ test('admin login returns tokens and grants admin dashboard access', async () =>
   assert.equal(response.status, 200);
 });
 
+test('admin login normalizes email case and whitespace', async () => {
+  const { response, body } = await request('/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: '  ADMIN@TEST.COM  ', password: PASSWORD, portal: 'admin' })
+  });
+  assert.equal(response.status, 200, JSON.stringify(body));
+  assert.equal(body.data.user.role, 'admin');
+});
+
 test('student and admin portals reject the wrong account role', async () => {
   const studentOnAdmin = await request('/auth/login', {
     method: 'POST',

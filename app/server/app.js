@@ -37,6 +37,7 @@ const getAllowedOrigins = () => {
 };
 
 const app = express();
+app.set('trust proxy', 1);
 
 app.use(helmet({
   contentSecurityPolicy: {
@@ -57,16 +58,31 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-app.use('/api/', rateLimit({
+const apiLimiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100,
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 1000,
   message: {
     success: false,
-    message: 'Too many requests from this IP, please try again later.'
+    message: 'The API request limit was reached. Please wait briefly and try again.'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => req.path === '/health'
+});
+
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: parseInt(process.env.AUTH_RATE_LIMIT_MAX_REQUESTS) || 30,
+  message: {
+    success: false,
+    message: 'Too many sign-in attempts. Please wait 15 minutes or contact an administrator.'
   },
   standardHeaders: true,
   legacyHeaders: false
-}));
+});
+
+app.use('/api/auth/login', loginLimiter);
+app.use('/api/', apiLimiter);
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
