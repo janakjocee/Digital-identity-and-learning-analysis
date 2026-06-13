@@ -1,192 +1,153 @@
-/**
- * Content Page
- * Learning content for students
- */
-
-import { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
-import {
-  BookOpen,
-  ChevronRight,
-  PlayCircle,
-  FileText,
-  CheckCircle,
-  Lock,
-  GraduationCap
-} from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { BookOpen, CheckCircle, ChevronRight, GraduationCap, PlayCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
-import { Progress } from '../../components/ui/progress';
 import { Badge } from '../../components/ui/badge';
+import { Progress } from '../../components/ui/progress';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import api from '../../lib/api';
+import { toast } from 'sonner';
 
-interface Subject {
-  _id: string;
-  name: string;
-  code: string;
-  description?: string;
-  color: string;
-}
-
-interface Chapter {
-  _id: string;
-  name: string;
-  description?: string;
-  subject: Subject;
-  order: number;
-}
+interface Subject { _id: string; name: string; code: string; color: string; }
+interface Chapter { _id: string; name: string; description?: string; subject: Subject; order: number; }
+interface ModuleSummary { _id: string; title: string; description?: string; chapter: string; estimatedDuration: number; }
+interface ContentBlock { _id: string; title?: string; content?: string; type: string; }
+interface ModuleDetail extends ModuleSummary { contentBlocks: ContentBlock[]; }
 
 export default function Content() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [chapters, setChapters] = useState<Chapter[]>([]);
+  const [modules, setModules] = useState<ModuleSummary[]>([]);
+  const [completedIds, setCompletedIds] = useState<string[]>([]);
+  const [activeModule, setActiveModule] = useState<ModuleDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    fetchContent();
-  }, []);
 
   const fetchContent = async () => {
     try {
-      const response = await api.get('/content/my-content');
-      setSubjects(response.data.data.subjects);
-      setChapters(response.data.data.chapters);
-    } catch (error) {
-      console.error('Failed to fetch content:', error);
+      const { data } = await api.get('/content/my-content');
+      setSubjects(data.data.subjects);
+      setChapters(data.data.chapters);
+      setModules(data.data.modules);
+      setCompletedIds(data.data.progress.completedModuleIds);
+    } catch {
+      toast.error('Unable to load learning content');
     } finally {
       setIsLoading(false);
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
-      </div>
-    );
-  }
+  useEffect(() => { fetchContent(); }, []);
+
+  const openModule = async (moduleId: string) => {
+    try {
+      const { data } = await api.get(`/content/modules/${moduleId}`);
+      setActiveModule(data.data.module);
+    } catch {
+      toast.error('Unable to open this lesson');
+    }
+  };
+
+  const completeModule = async () => {
+    if (!activeModule) return;
+    try {
+      await api.post(`/content/modules/${activeModule._id}/complete`, { timeSpent: activeModule.estimatedDuration * 60 });
+      setCompletedIds((current) => [...new Set([...current, activeModule._id])]);
+      toast.success('Lesson completed and progress updated');
+    } catch {
+      toast.error('Unable to update progress');
+    }
+  };
+
+  const progress = modules.length ? Math.round((completedIds.length / modules.length) * 100) : 0;
+  const continueModule = useMemo(
+    () => modules.find((item) => !completedIds.includes(item._id)) || modules[0],
+    [modules, completedIds]
+  );
+
+  if (isLoading) return <div className="flex h-96 items-center justify-center"><div className="h-12 w-12 animate-spin rounded-full border-b-2 border-blue-600" /></div>;
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold flex items-center space-x-2">
-          <BookOpen className="w-6 h-6 text-blue-600" />
-          <span>Learning Content</span>
-        </h1>
-        <p className="text-slate-500 dark:text-slate-400">
-          Explore subjects and chapters for your class
-        </p>
+        <h1 className="flex items-center space-x-2 text-2xl font-bold"><BookOpen className="w-6 h-6 text-blue-600" /><span>Learning Content</span></h1>
+        <p className="text-slate-500">Explore published subjects and complete lessons for your class.</p>
       </div>
 
-      {/* Subjects */}
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {subjects.map((subject, index) => (
-          <motion.div
-            key={subject._id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.05 }}
-          >
-            <Card className="group cursor-pointer hover:shadow-lg transition-shadow">
-              <CardContent className="p-6">
-                <div
-                  className="w-12 h-12 rounded-xl flex items-center justify-center mb-4"
-                  style={{ backgroundColor: `${subject.color}20` }}
-                >
-                  <GraduationCap className="w-6 h-6" style={{ color: subject.color }} />
-                </div>
-                <h3 className="font-bold mb-1">{subject.name}</h3>
-                <p className="text-sm text-slate-500">{subject.code}</p>
-                <div className="mt-4 flex items-center justify-between">
-                  <span className="text-sm text-slate-500">
-                    {chapters.filter(c => c.subject?._id === subject._id).length} chapters
-                  </span>
-                  <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-blue-600 transition-colors" />
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {subjects.map((subject) => (
+          <Card key={subject._id}>
+            <CardContent className="p-6">
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-4" style={{ backgroundColor: `${subject.color}20` }}>
+                <GraduationCap className="w-6 h-6" style={{ color: subject.color }} />
+              </div>
+              <h3 className="font-bold">{subject.name}</h3>
+              <p className="text-sm text-slate-500">{chapters.filter((c) => c.subject?._id === subject._id).length} chapter</p>
+            </CardContent>
+          </Card>
         ))}
       </div>
 
-      {/* Chapters */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-        <Card>
-          <CardHeader>
-            <CardTitle>Chapters</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {chapters.map((chapter, index) => (
-                <div
-                  key={chapter._id}
-                  className="flex items-center justify-between p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-                >
-                  <div className="flex items-center space-x-4">
-                    <div
-                      className="w-10 h-10 rounded-lg flex items-center justify-center"
-                      style={{ backgroundColor: `${chapter.subject?.color}20` }}
-                    >
-                      <span className="font-bold" style={{ color: chapter.subject?.color }}>
-                        {chapter.order}
-                      </span>
-                    </div>
-                    <div>
-                      <p className="font-medium">{chapter.name}</p>
-                      <p className="text-sm text-slate-500">{chapter.subject?.name}</p>
-                    </div>
+      <Card>
+        <CardHeader><CardTitle>Chapters and lessons</CardTitle></CardHeader>
+        <CardContent className="space-y-4">
+          {chapters.map((chapter) => {
+            const chapterModules = modules.filter((item) => item.chapter === chapter._id);
+            return (
+              <div key={chapter._id} className="rounded-xl border p-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <div className="flex gap-2"><Badge style={{ backgroundColor: chapter.subject?.color }}>{chapter.subject?.name}</Badge><Badge variant="secondary">Chapter {chapter.order}</Badge></div>
+                    <p className="mt-2 font-semibold">{chapter.name}</p>
+                    <p className="text-sm text-slate-500">{chapter.description}</p>
                   </div>
-                  <div className="flex items-center space-x-4">
-                    <div className="flex items-center space-x-2 text-sm text-slate-500">
-                      <PlayCircle className="w-4 h-4" />
-                      <span>5 modules</span>
+                  <span className="text-sm text-slate-500">{chapterModules.length} lesson</span>
+                </div>
+                <div className="mt-4 space-y-2">
+                  {chapterModules.map((item) => (
+                    <div key={item._id} className="flex items-center justify-between rounded-lg bg-slate-50 p-3 dark:bg-slate-800/50">
+                      <div className="flex items-center gap-3">
+                        {completedIds.includes(item._id) ? <CheckCircle className="w-5 h-5 text-green-600" /> : <PlayCircle className="w-5 h-5 text-blue-600" />}
+                        <div><p className="font-medium">{item.title}</p><p className="text-xs text-slate-500">{item.estimatedDuration} minutes</p></div>
+                      </div>
+                      <Button size="sm" variant="outline" onClick={() => openModule(item._id)}>{completedIds.includes(item._id) ? 'Review' : 'Start'}<ChevronRight className="ml-1 w-4 h-4" /></Button>
                     </div>
-                    <Button size="sm" variant="outline">
-                      Start
-                      <ChevronRight className="w-4 h-4 ml-1" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
-              {chapters.length === 0 && (
-                <div className="text-center py-8 text-slate-500">
-                  No chapters available for your class yet
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
-
-      {/* Continue Learning */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
-        <Card>
-          <CardHeader>
-            <CardTitle>Continue Learning</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20">
-              <div className="flex items-center space-x-4">
-                <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center">
-                  <PlayCircle className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <p className="font-medium">Introduction to Algebra</p>
-                  <p className="text-sm text-slate-500">Mathematics • Chapter 1</p>
-                  <div className="flex items-center space-x-2 mt-2">
-                    <Progress value={65} className="w-32 h-2" />
-                    <span className="text-sm text-slate-500">65%</span>
-                  </div>
+                  ))}
                 </div>
               </div>
-              <Button className="bg-gradient-to-r from-blue-600 to-purple-600">
-                Continue
-                <ChevronRight className="w-4 h-4 ml-1" />
-              </Button>
+            );
+          })}
+        </CardContent>
+      </Card>
+
+      {continueModule && (
+        <Card>
+          <CardHeader><CardTitle>Continue learning</CardTitle></CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-blue-500/20 bg-gradient-to-r from-blue-500/10 to-purple-500/10 p-4">
+              <div><p className="font-medium">{continueModule.title}</p><p className="text-sm text-slate-500">{completedIds.length} of {modules.length} lessons complete</p><Progress value={progress} className="mt-2 w-48" /></div>
+              <Button onClick={() => openModule(continueModule._id)}>Continue <ChevronRight className="ml-1 w-4 h-4" /></Button>
             </div>
           </CardContent>
         </Card>
-      </motion.div>
+      )}
+
+      <Dialog open={Boolean(activeModule)} onOpenChange={(open) => !open && setActiveModule(null)}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>{activeModule?.title}</DialogTitle></DialogHeader>
+          <p className="text-sm text-slate-500">{activeModule?.description}</p>
+          <div className="space-y-4">
+            {activeModule?.contentBlocks.map((block) => (
+              <div key={block._id} className="rounded-xl border p-4">
+                <h3 className="font-semibold">{block.title}</h3>
+                <div className="prose prose-sm mt-2 max-w-none dark:prose-invert" dangerouslySetInnerHTML={{ __html: block.content || '' }} />
+              </div>
+            ))}
+          </div>
+          <Button onClick={completeModule} disabled={activeModule ? completedIds.includes(activeModule._id) : false}>
+            <CheckCircle className="mr-2 w-4 h-4" />{activeModule && completedIds.includes(activeModule._id) ? 'Lesson completed' : 'Mark lesson complete'}
+          </Button>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
