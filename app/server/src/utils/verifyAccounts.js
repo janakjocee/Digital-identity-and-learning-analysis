@@ -4,11 +4,19 @@ require('dotenv').config({ path: path.resolve(__dirname, '../../../../backend/.e
 
 const requiredEnvironment = [
   'DEV_ADMIN_EMAIL',
-  'DEV_STUDENT_EMAIL',
-  'DEV_ACCOUNT_PASSWORD'
+  'DEV_STUDENT_EMAIL'
 ];
 
-const missingEnvironment = requiredEnvironment.filter((name) => !process.env[name]);
+const getAccountPassword = (role) => (
+  process.env[role === 'admin' ? 'DEV_ADMIN_PASSWORD' : 'DEV_STUDENT_PASSWORD']
+  || process.env.DEV_ACCOUNT_PASSWORD
+);
+
+const missingEnvironment = [
+  ...requiredEnvironment.filter((name) => !process.env[name]),
+  ...(!getAccountPassword('admin') ? ['DEV_ADMIN_PASSWORD or DEV_ACCOUNT_PASSWORD'] : []),
+  ...(!getAccountPassword('student') ? ['DEV_STUDENT_PASSWORD or DEV_ACCOUNT_PASSWORD'] : [])
+];
 
 if (missingEnvironment.length > 0) {
   console.error(`Missing required environment variables: ${missingEnvironment.join(', ')}`);
@@ -28,11 +36,11 @@ const request = async (pathName, options = {}) => {
   return body;
 };
 
-const verifyAccount = async ({ email, expectedRole, protectedPath }) => {
+const verifyAccount = async ({ email, password, expectedRole, protectedPath }) => {
   const login = await request('/auth/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password: process.env.DEV_ACCOUNT_PASSWORD })
+    body: JSON.stringify({ email, password })
   });
 
   const token = login.data.tokens.accessToken;
@@ -51,11 +59,13 @@ const verifyAccounts = async () => {
   try {
     await verifyAccount({
       email: process.env.DEV_ADMIN_EMAIL,
+      password: getAccountPassword('admin'),
       expectedRole: 'admin',
       protectedPath: '/admin/dashboard'
     });
     await verifyAccount({
       email: process.env.DEV_STUDENT_EMAIL,
+      password: getAccountPassword('student'),
       expectedRole: 'student',
       protectedPath: '/users/dashboard'
     });
