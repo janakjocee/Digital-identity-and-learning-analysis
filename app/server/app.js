@@ -72,10 +72,26 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 
-const healthHandler = (req, res) => {
+const healthHandler = async (req, res) => {
   const missingEnvironment = getMissingEnvironment();
-  res.status(missingEnvironment.length > 0 ? 503 : 200).json({
-    success: missingEnvironment.length === 0,
+
+  if (missingEnvironment.length === 0) {
+    try {
+      await connectDB();
+    } catch (error) {
+      return res.status(503).json({
+        success: false,
+        message: 'Server configuration is valid, but the database connection failed',
+        database: 'disconnected',
+        missingEnvironment,
+        timestamp: new Date().toISOString(),
+        environment: process.env.NODE_ENV || 'development'
+      });
+    }
+  }
+
+  res.status(missingEnvironment.length === 0 && mongoose.connection.readyState === 1 ? 200 : 503).json({
+    success: missingEnvironment.length === 0 && mongoose.connection.readyState === 1,
     message: missingEnvironment.length === 0 ? 'Server is ready' : 'Server configuration is incomplete',
     database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
     missingEnvironment,
