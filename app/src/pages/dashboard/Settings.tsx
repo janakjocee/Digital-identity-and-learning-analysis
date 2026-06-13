@@ -33,15 +33,15 @@ export default function Settings() {
     newPassword: '',
     confirmPassword: ''
   });
-  const [notifications, setNotifications] = useState({
-    email: true,
-    push: false,
-    quizReminders: true,
-    progressUpdates: true,
-    newContent: false
+  const [notifications, setNotifications] = useState(() => {
+    const saved = localStorage.getItem('learnsync-notifications');
+    return saved ? JSON.parse(saved) : { email: true, push: false, quizReminders: true, progressUpdates: true, newContent: false };
   });
+  const [language, setLanguage] = useState(() => localStorage.getItem('learnsync-language') || 'en');
 
   const handleSave = () => {
+    localStorage.setItem('learnsync-notifications', JSON.stringify(notifications));
+    localStorage.setItem('learnsync-language', language);
     toast.success('Settings saved successfully');
   };
 
@@ -246,7 +246,7 @@ export default function Settings() {
           <CardContent>
             <div className="space-y-2">
               <Label>Language</Label>
-              <select className="w-full h-10 px-3 rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+              <select value={language} onChange={(event) => setLanguage(event.target.value)} className="w-full h-10 px-3 rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
                 <option value="en">English</option>
                 <option value="es">Spanish</option>
                 <option value="fr">French</option>
