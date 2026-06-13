@@ -4,7 +4,8 @@
  */
 
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { FormEvent } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Bell,
@@ -24,25 +25,35 @@ import { useTheme } from '../contexts/ThemeContext';
 export default function Header() {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [search, setSearch] = useState('');
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const navigate = useNavigate();
 
   const isAdmin = user?.role === 'admin' || user?.role === 'superadmin';
   const basePath = isAdmin ? '/admin' : '/dashboard';
+  const submitSearch = (event: FormEvent) => {
+    event.preventDefault();
+    const query = search.trim();
+    if (!query) return;
+    navigate(isAdmin ? `/admin/students?search=${encodeURIComponent(query)}` : `/dashboard/content?search=${encodeURIComponent(query)}`);
+  };
 
   return (
     <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-6">
       {/* Search */}
-      <div className="flex-1 max-w-md">
+      <form className="flex-1 max-w-md" onSubmit={submitSearch}>
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <Input
             type="search"
-            placeholder="Search..."
+            placeholder={isAdmin ? 'Search students...' : 'Search subjects and lessons...'}
             className="pl-10 bg-slate-100 dark:bg-slate-800 border-none"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
           />
         </div>
-      </div>
+      </form>
 
       {/* Right Actions */}
       <div className="flex items-center space-x-4">
@@ -80,14 +91,14 @@ export default function Header() {
                   <h3 className="font-semibold">Notifications</h3>
                 </div>
                 <div className="p-2">
-                  <div className="p-3 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">
-                    <p className="text-sm font-medium">New quiz available</p>
-                    <p className="text-xs text-slate-500">Mathematics - Algebra</p>
-                  </div>
-                  <div className="p-3 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">
-                    <p className="text-sm font-medium">Achievement unlocked!</p>
-                    <p className="text-xs text-slate-500">Completed 5 quizzes</p>
-                  </div>
+                  <Link to={isAdmin ? '/admin/students' : '/dashboard/quizzes'} className="block p-3 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">
+                    <p className="text-sm font-medium">{isAdmin ? 'Review student progress' : 'Quizzes are ready'}</p>
+                    <p className="text-xs text-slate-500">{isAdmin ? 'Open live student records and approvals' : 'Open your class checkpoints'}</p>
+                  </Link>
+                  <Link to={isAdmin ? '/admin/reports' : '/dashboard/progress'} className="block p-3 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">
+                    <p className="text-sm font-medium">{isAdmin ? 'Platform report available' : 'Progress record updated'}</p>
+                    <p className="text-xs text-slate-500">{isAdmin ? 'View live engagement and performance' : 'Review your latest completion and scores'}</p>
+                  </Link>
                 </div>
               </motion.div>
             )}

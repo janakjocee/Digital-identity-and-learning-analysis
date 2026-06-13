@@ -26,6 +26,7 @@ import { Progress } from '../../components/ui/progress';
 import { useAuth } from '../../contexts/AuthContext';
 import api from '../../lib/api';
 import { formatNumber, getRiskColor } from '../../lib/utils';
+import { toast } from 'sonner';
 import {
   LineChart,
   Line,
@@ -72,29 +73,28 @@ export default function AdminDashboard() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [analyticsData, setAnalyticsData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
 
   useEffect(() => {
-    fetchDashboardData();
-    fetchAnalytics();
+    fetchAdminOverview();
   }, []);
 
-  const fetchDashboardData = async () => {
+  const fetchAdminOverview = async () => {
+    setIsLoading(true);
+    setLoadError('');
     try {
-      const response = await api.get('/admin/dashboard');
-      setData(response.data.data);
-    } catch (error) {
-      console.error('Failed to fetch dashboard data:', error);
+      const [dashboardResponse, analyticsResponse] = await Promise.all([
+        api.get('/admin/dashboard'),
+        api.get('/admin/analytics')
+      ]);
+      setData(dashboardResponse.data.data);
+      setAnalyticsData(analyticsResponse.data.data);
+    } catch (error: any) {
+      const message = error.response?.data?.message || 'The admin data service is temporarily unavailable.';
+      setLoadError(message);
+      toast.error(message);
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const fetchAnalytics = async () => {
-    try {
-      const response = await api.get('/admin/analytics');
-      setAnalyticsData(response.data.data);
-    } catch (error) {
-      console.error('Failed to fetch analytics:', error);
     }
   };
 
@@ -103,6 +103,19 @@ export default function AdminDashboard() {
       <div className="flex items-center justify-center h-96">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
       </div>
+    );
+  }
+
+  if (loadError || !data) {
+    return (
+      <Card className="mx-auto mt-16 max-w-xl">
+        <CardContent className="p-8 text-center">
+          <AlertTriangle className="mx-auto h-12 w-12 text-amber-500" />
+          <h1 className="mt-4 text-xl font-bold">Admin dashboard could not load</h1>
+          <p className="mt-2 text-sm text-slate-500">{loadError || 'No dashboard data was returned.'}</p>
+          <Button className="mt-6" onClick={fetchAdminOverview}>Retry admin dashboard</Button>
+        </CardContent>
+      </Card>
     );
   }
 

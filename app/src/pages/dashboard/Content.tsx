@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { BookOpen, CheckCircle, ChevronRight, GraduationCap, PlayCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -15,6 +16,7 @@ interface ContentBlock { _id: string; title?: string; content?: string; type: st
 interface ModuleDetail extends ModuleSummary { contentBlocks: ContentBlock[]; }
 
 export default function Content() {
+  const [searchParams] = useSearchParams();
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [modules, setModules] = useState<ModuleSummary[]>([]);
@@ -38,6 +40,13 @@ export default function Content() {
   };
 
   useEffect(() => { fetchContent(); }, []);
+
+  useEffect(() => {
+    const query = searchParams.get('search')?.toLowerCase();
+    if (!query || !subjects.length) return;
+    const subject = subjects.find((item) => `${item.name} ${item.code}`.toLowerCase().includes(query));
+    if (subject) setSelectedSubjectId(subject._id);
+  }, [searchParams, subjects]);
 
   const openModule = async (moduleId: string) => {
     try {

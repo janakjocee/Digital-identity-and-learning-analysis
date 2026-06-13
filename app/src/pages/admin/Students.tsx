@@ -5,6 +5,7 @@
 
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
+import { useSearchParams } from 'react-router-dom';
 import {
   Users,
   Search,
@@ -53,10 +54,11 @@ interface Student {
 }
 
 export default function Students() {
+  const [searchParams] = useSearchParams();
   const [students, setStudents] = useState<Student[]>([]);
   const [pendingStudents, setPendingStudents] = useState<Student[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(() => searchParams.get('search') || '');
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
 
