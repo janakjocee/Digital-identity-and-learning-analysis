@@ -53,6 +53,7 @@ function App() {
             <Route path="/" element={<MainLayout />}>
               <Route index element={<Home />} />
               <Route path="login" element={<Login />} />
+              <Route path="admin/login" element={<Login portal="admin" />} />
               <Route path="register" element={<Register />} />
               <Route path="forgot-password" element={<ForgotPassword />} />
               <Route path="reset-password" element={<ResetPassword />} />
@@ -81,7 +82,7 @@ function App() {
 
             {/* Admin Routes */}
             <Route path="/admin" element={
-              <ProtectedRoute>
+              <ProtectedRoute loginPath="/admin/login">
                 <RoleRoute allowedRoles={['admin', 'superadmin']}>
                   <DashboardLayout />
                 </RoleRoute>

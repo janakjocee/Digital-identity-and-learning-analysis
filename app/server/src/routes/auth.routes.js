@@ -109,7 +109,7 @@ router.post('/register', authValidation.register, asyncHandler(async (req, res) 
  * @access  Public
  */
 router.post('/login', authValidation.login, asyncHandler(async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password, portal } = req.body;
   
   // Find user with password
   const user = await User.findOne({ email }).select('+password');
@@ -139,6 +139,16 @@ router.post('/login', authValidation.login, asyncHandler(async (req, res) => {
     return res.status(401).json({
       success: false,
       message: 'Invalid email or password.'
+    });
+  }
+
+  const isAdmin = user.role === 'admin' || user.role === 'superadmin';
+  if ((portal === 'admin' && !isAdmin) || (portal === 'student' && isAdmin)) {
+    return res.status(403).json({
+      success: false,
+      message: portal === 'admin'
+        ? 'This account is not authorized for the admin portal.'
+        : 'Administrator accounts must sign in through the admin portal.'
     });
   }
   

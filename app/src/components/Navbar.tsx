@@ -99,11 +99,12 @@ export default function Navbar() {
               </Link>
             ) : (
               <>
-                <Link to="/login">
+                <Link to="/admin/login">
                   <Button variant="ghost" className="text-slate-600 dark:text-slate-300">
-                    Sign In
+                    Admin Login
                   </Button>
                 </Link>
+                <Link to="/login"><Button variant="outline">Student Login</Button></Link>
                 <Link to="/register">
                   <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                     <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg shadow-blue-500/25">
@@ -160,9 +161,10 @@ export default function Navbar() {
                   <>
                     <Link to="/login" className="block w-full">
                       <Button variant="outline" className="w-full">
-                        Sign In
+                        Student Login
                       </Button>
                     </Link>
+                    <Link to="/admin/login" className="block w-full"><Button variant="ghost" className="w-full">Admin Login</Button></Link>
                     <Link to="/register" className="block w-full">
                       <Button className="w-full bg-gradient-to-r from-blue-600 to-purple-600">
                         Get Started

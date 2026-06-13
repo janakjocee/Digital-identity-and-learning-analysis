@@ -64,6 +64,9 @@ const authValidation = {
       .isEmail().withMessage('Please enter a valid email'),
     body('password')
       .notEmpty().withMessage('Password is required'),
+    body('portal')
+      .optional()
+      .isIn(['student', 'admin']).withMessage('Invalid login portal'),
     handleValidationErrors
   ],
   

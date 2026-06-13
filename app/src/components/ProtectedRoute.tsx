@@ -10,9 +10,10 @@ import { Loader2 } from 'lucide-react';
 interface ProtectedRouteProps {
   children: React.ReactNode;
   requireApprovedStudent?: boolean;
+  loginPath?: string;
 }
 
-export default function ProtectedRoute({ children, requireApprovedStudent = false }: ProtectedRouteProps) {
+export default function ProtectedRoute({ children, requireApprovedStudent = false, loginPath = '/login' }: ProtectedRouteProps) {
   const { user, isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) {
@@ -24,7 +25,7 @@ export default function ProtectedRoute({ children, requireApprovedStudent = fals
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to={loginPath} replace />;
   }
 
   if (requireApprovedStudent) {
