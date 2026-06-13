@@ -238,6 +238,8 @@ userSchema.methods.incrementLoginAttempts = async function() {
 userSchema.methods.updatePerformanceMetrics = async function() {
   const QuizAttempt = mongoose.model('QuizAttempt');
   const LearningActivity = mongoose.model('LearningActivity');
+  const Chapter = mongoose.model('Chapter');
+  const Module = mongoose.model('Module');
   
   // Calculate quiz statistics
   const quizStats = await QuizAttempt.aggregate([
@@ -253,13 +255,27 @@ userSchema.methods.updatePerformanceMetrics = async function() {
   ]);
   
   // Calculate completion rate
-  const totalModules = await mongoose.model('Module').countDocuments({
-    classLevel: { $lte: this.assignedClass }
+  const classChapters = await Chapter.find({
+    classLevel: this.assignedClass,
+    isActive: true,
+    isPublished: true
+  }).distinct('_id');
+
+  const totalModules = await Module.countDocuments({
+    chapter: { $in: classChapters },
+    isActive: true,
+    isPublished: true
   });
+  const classModules = await Module.find({
+    chapter: { $in: classChapters },
+    isActive: true,
+    isPublished: true
+  }).distinct('_id');
   
   const completedModules = await LearningActivity.distinct('module', {
     student: this._id,
-    activityType: 'module_complete'
+    activityType: 'module_complete',
+    module: { $in: classModules }
   });
   
   this.performanceMetrics = {

@@ -7,6 +7,7 @@ const express = require('express');
 const Subject = require('../models/Subject');
 const Chapter = require('../models/Chapter');
 const Module = require('../models/Module');
+const Quiz = require('../models/Quiz');
 const LearningActivity = require('../models/LearningActivity');
 const { authenticate, optionalAuth } = require('../middleware/auth.middleware');
 const { authorize, roles, requireApprovedStudent, authorizeClassAccess } = require('../middleware/role.middleware');
@@ -183,10 +184,7 @@ router.get('/modules/:id', authenticate, requireApprovedStudent, asyncHandler(as
       duration: 0
     },
     ipAddress: req.ip,
-    device: {
-      type: req.headers['user-agent']?.includes('Mobile') ? 'mobile' : 'desktop',
-      browser: req.headers['user-agent']
-    }
+    device: req.headers['user-agent']?.includes('Mobile') ? 'mobile' : 'desktop'
   });
   
   // Update view count
@@ -224,7 +222,12 @@ router.post('/modules/:id/complete', authenticate, requireApprovedStudent, async
   });
 
   if (alreadyCompleted) {
-    return res.json({ success: true, message: 'Module was already completed' });
+    await req.user.updatePerformanceMetrics();
+    return res.json({
+      success: true,
+      message: 'Module was already completed',
+      data: { performanceMetrics: req.user.performanceMetrics }
+    });
   }
 
   // Log completion
@@ -245,10 +248,13 @@ router.post('/modules/:id/complete', authenticate, requireApprovedStudent, async
   await Module.findByIdAndUpdate(module._id, {
     $inc: { 'statistics.totalCompletions': 1 }
   });
+
+  await req.user.updatePerformanceMetrics();
   
   res.json({
     success: true,
-    message: 'Module marked as completed'
+    message: 'Module marked as completed',
+    data: { performanceMetrics: req.user.performanceMetrics }
   });
 }));
 
@@ -389,11 +395,13 @@ router.get('/my-content', authenticate, requireApprovedStudent, asyncHandler(asy
   })
     .select('-contentBlocks.content -__v')
     .sort({ order: 1 });
+  const moduleIds = modules.map((module) => module._id);
   
   // Get user's progress
   const completedModules = await LearningActivity.distinct('module', {
     student: req.user._id,
-    activityType: 'module_complete'
+    activityType: 'module_complete',
+    module: { $in: moduleIds }
   });
   
   res.json({
