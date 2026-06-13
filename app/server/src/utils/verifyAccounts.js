@@ -15,7 +15,7 @@ if (missingEnvironment.length > 0) {
   process.exit(1);
 }
 
-const apiBaseUrl = (process.env.DEV_API_URL || 'http://127.0.0.1:5000/api').replace(/\/$/, '');
+const apiBaseUrl = (process.argv[2] || process.env.DEV_API_URL || 'http://127.0.0.1:5000/api').replace(/\/$/, '');
 
 const request = async (pathName, options = {}) => {
   const response = await fetch(`${apiBaseUrl}${pathName}`, options);
