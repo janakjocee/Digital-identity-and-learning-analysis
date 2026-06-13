@@ -1,300 +1,138 @@
-/**
- * Quizzes Page
- * Quiz management for students
- */
-
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import {
-  FileQuestion,
-  Clock,
-  CheckCircle,
-  XCircle,
-  Play,
-  RotateCcw,
-  ChevronRight,
-  Search
-} from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
+import { CheckCircle, Clock, FileQuestion, Play, Search, Trophy } from 'lucide-react';
+import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Badge } from '../../components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import api from '../../lib/api';
-import { getScoreColor, formatDate } from '../../lib/utils';
+import { toast } from 'sonner';
 
+interface Option { _id?: string; text: string; order: number; }
+interface Question { _id: string; question: string; options: Option[]; }
 interface Quiz {
-  _id: string;
-  title: string;
-  description?: string;
-  questionCount: number;
-  settings: {
-    timeLimit: number;
-    passingScore: number;
-  };
-  userAttempt?: {
-    status: string;
-    score: number;
-  };
+  _id: string; title: string; description?: string; questionCount: number;
+  settings: { timeLimit: number; passingScore: number; attemptsAllowed: number };
+  questions?: Question[];
+  subject?: { name: string };
+  userAttempt?: { status: string; score: number };
 }
 
 export default function Quizzes() {
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
-  const [attempts, setAttempts] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-
-  useEffect(() => {
-    fetchQuizzes();
-    fetchAttempts();
-  }, []);
+  const [search, setSearch] = useState('');
+  const [activeQuiz, setActiveQuiz] = useState<Quiz | null>(null);
+  const [attemptId, setAttemptId] = useState('');
+  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [result, setResult] = useState<{ score: { percentage: number }; passed: boolean } | null>(null);
+  const [loading, setLoading] = useState(true);
 
   const fetchQuizzes = async () => {
     try {
-      const response = await api.get('/quizzes');
-      setQuizzes(response.data.data.quizzes);
-    } catch (error) {
-      console.error('Failed to fetch quizzes:', error);
+      const { data } = await api.get('/quizzes');
+      setQuizzes(data.data.quizzes);
+    } catch {
+      toast.error('Unable to load quizzes');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
+  useEffect(() => { fetchQuizzes(); }, []);
 
-  const fetchAttempts = async () => {
+  const startQuiz = async (quizId: string) => {
     try {
-      const response = await api.get('/quizzes/history/me');
-      setAttempts(response.data.data.attempts);
-    } catch (error) {
-      console.error('Failed to fetch attempts:', error);
+      const [{ data: quizData }, { data: attemptData }] = await Promise.all([
+        api.get(`/quizzes/${quizId}`),
+        api.post(`/quizzes/${quizId}/start`)
+      ]);
+      setActiveQuiz(quizData.data.quiz);
+      setAttemptId(attemptData.data.attempt._id);
+      setAnswers({});
+      setResult(null);
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Unable to start quiz');
     }
   };
 
-  const filteredQuizzes = quizzes.filter(q =>
-    q.title.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const submitQuiz = async () => {
+    if (!activeQuiz || !attemptId || !activeQuiz.questions) return;
+    if (Object.keys(answers).length !== activeQuiz.questions.length) {
+      toast.error('Please answer every question before submitting');
+      return;
+    }
+    try {
+      for (const question of activeQuiz.questions) {
+        await api.post(`/quizzes/attempts/${attemptId}/answer`, { questionId: question._id, answer: answers[question._id], timeSpent: 10 });
+      }
+      const { data } = await api.post(`/quizzes/attempts/${attemptId}/complete`);
+      setResult(data.data.results);
+      await fetchQuizzes();
+      toast.success('Quiz completed and your live record was updated');
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Unable to submit quiz');
+    }
+  };
 
-  const availableQuizzes = filteredQuizzes.filter(q => !q.userAttempt || q.userAttempt.status !== 'completed');
-  const completedQuizzes = filteredQuizzes.filter(q => q.userAttempt?.status === 'completed');
+  const visible = quizzes.filter((quiz) => quiz.title.toLowerCase().includes(search.toLowerCase()));
+  const completed = quizzes.filter((quiz) => quiz.userAttempt?.status === 'completed');
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
-      </div>
-    );
-  }
+  if (loading) return <div className="flex h-96 items-center justify-center"><div className="h-12 w-12 animate-spin rounded-full border-b-2 border-blue-600" /></div>;
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center space-x-2">
-            <FileQuestion className="w-6 h-6 text-blue-600" />
-            <span>Quizzes</span>
-          </h1>
-          <p className="text-slate-500 dark:text-slate-400">
-            Test your knowledge and track your progress
-          </p>
-        </div>
-        <div className="relative w-full lg:w-64">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <Input
-            placeholder="Search quizzes..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
-        </div>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div><h1 className="flex items-center gap-2 text-2xl font-bold"><FileQuestion className="text-blue-600" />Quizzes</h1><p className="text-slate-500">Complete class-specific checkpoints and update your live learning record.</p></div>
+        <div className="relative"><Search className="absolute left-3 top-3 w-4 h-4 text-slate-400" /><Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search quizzes" className="pl-9" /></div>
       </div>
-
-      {/* Stats */}
       <div className="grid grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold">{quizzes.length}</p>
-            <p className="text-sm text-slate-500">Total Quizzes</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold text-green-600">{completedQuizzes.length}</p>
-            <p className="text-sm text-slate-500">Completed</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold text-blue-600">{availableQuizzes.length}</p>
-            <p className="text-sm text-slate-500">Available</p>
-          </CardContent>
-        </Card>
+        <Card><CardContent className="p-4 text-center"><p className="text-2xl font-bold">{quizzes.length}</p><p className="text-sm text-slate-500">Class quizzes</p></CardContent></Card>
+        <Card><CardContent className="p-4 text-center"><p className="text-2xl font-bold text-green-600">{completed.length}</p><p className="text-sm text-slate-500">Completed</p></CardContent></Card>
+        <Card><CardContent className="p-4 text-center"><p className="text-2xl font-bold text-blue-600">{quizzes.length - completed.length}</p><p className="text-sm text-slate-500">Available</p></CardContent></Card>
       </div>
-
-      <Tabs defaultValue="available" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="available">Available ({availableQuizzes.length})</TabsTrigger>
-          <TabsTrigger value="completed">Completed ({completedQuizzes.length})</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="available">
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {availableQuizzes.map((quiz, index) => (
-              <motion.div
-                key={quiz._id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05 }}
-              >
-                <Card className="group hover:shadow-lg transition-shadow">
-                  <CardContent className="p-6">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center">
-                        <FileQuestion className="w-6 h-6 text-blue-600" />
-                      </div>
-                      <Badge variant="secondary">
-                        {quiz.questionCount} questions
-                      </Badge>
-                    </div>
-                    <h3 className="font-bold mb-2">{quiz.title}</h3>
-                    <p className="text-sm text-slate-500 mb-4 line-clamp-2">
-                      {quiz.description || 'Test your knowledge with this quiz'}
-                    </p>
-                    <div className="flex items-center justify-between text-sm text-slate-500 mb-4">
-                      <div className="flex items-center space-x-1">
-                        <Clock className="w-4 h-4" />
-                        <span>{quiz.settings.timeLimit || 'Unlimited'} min</span>
-                      </div>
-                      <div className="flex items-center space-x-1">
-                        <CheckCircle className="w-4 h-4" />
-                        <span>Pass: {quiz.settings.passingScore}%</span>
-                      </div>
-                    </div>
-                    <Button className="w-full bg-gradient-to-r from-blue-600 to-purple-600">
-                      <Play className="w-4 h-4 mr-2" />
-                      Start Quiz
-                    </Button>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))}
-            {availableQuizzes.length === 0 && (
-              <div className="col-span-full text-center py-12">
-                <CheckCircle className="w-12 h-12 mx-auto text-green-500 mb-4" />
-                <p className="text-slate-500">You've completed all available quizzes!</p>
-              </div>
-            )}
-          </div>
-        </TabsContent>
-
-        <TabsContent value="completed">
-          <div className="space-y-4">
-            {completedQuizzes.map((quiz, index) => (
-              <motion.div
-                key={quiz._id}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.05 }}
-              >
-                <Card>
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-4">
-                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                          (quiz.userAttempt?.score || 0) >= quiz.settings.passingScore
-                            ? 'bg-green-100 dark:bg-green-900/30'
-                            : 'bg-red-100 dark:bg-red-900/30'
-                        }`}>
-                          {(quiz.userAttempt?.score || 0) >= quiz.settings.passingScore ? (
-                            <CheckCircle className="w-6 h-6 text-green-600" />
-                          ) : (
-                            <XCircle className="w-6 h-6 text-red-600" />
-                          )}
-                        </div>
-                        <div>
-                          <h3 className="font-bold">{quiz.title}</h3>
-                          <p className="text-sm text-slate-500">
-                            {quiz.questionCount} questions • {quiz.settings.timeLimit || 'Unlimited'} min
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-6">
-                        <div className="text-right">
-                          <p className={`text-2xl font-bold ${getScoreColor(quiz.userAttempt?.score || 0)}`}>
-                            {Math.round(quiz.userAttempt?.score || 0)}%
-                          </p>
-                          <p className="text-sm text-slate-500">
-                            {(quiz.userAttempt?.score || 0) >= quiz.settings.passingScore ? 'Passed' : 'Failed'}
-                          </p>
-                        </div>
-                        <Button variant="outline" size="sm">
-                          <RotateCcw className="w-4 h-4 mr-2" />
-                          Retake
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))}
-            {completedQuizzes.length === 0 && (
-              <div className="text-center py-12">
-                <FileQuestion className="w-12 h-12 mx-auto text-slate-400 mb-4" />
-                <p className="text-slate-500">No completed quizzes yet</p>
-              </div>
-            )}
-          </div>
-        </TabsContent>
-      </Tabs>
-
-      {/* Recent Attempts */}
-      {attempts.length > 0 && (
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}>
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Attempts</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-slate-200 dark:border-slate-800">
-                      <th className="text-left py-3 px-4 text-sm font-medium text-slate-500">Quiz</th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-slate-500">Score</th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-slate-500">Status</th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-slate-500">Date</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {attempts.slice(0, 5).map((attempt: any, idx: number) => (
-                      <tr key={idx} className="border-b border-slate-100 dark:border-slate-800/50">
-                        <td className="py-3 px-4">{attempt.quiz?.title || 'Quiz'}</td>
-                        <td className="py-3 px-4">
-                          <span className={`font-medium ${getScoreColor(attempt.score?.percentage || 0)}`}>
-                            {Math.round(attempt.score?.percentage || 0)}%
-                          </span>
-                        </td>
-                        <td className="py-3 px-4">
-                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                            attempt.results?.passed
-                              ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                              : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                          }`}>
-                            {attempt.results?.passed ? 'Passed' : 'Failed'}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 text-sm text-slate-500">
-                          {formatDate(attempt.completedAt)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {visible.map((quiz) => (
+          <Card key={quiz._id}>
+            <CardContent className="p-6">
+              <div className="flex items-start justify-between"><div className="rounded-xl bg-blue-100 p-3 dark:bg-blue-900/30"><FileQuestion className="text-blue-600" /></div><Badge>{quiz.subject?.name || `${quiz.questionCount} questions`}</Badge></div>
+              <h3 className="mt-4 font-bold">{quiz.title}</h3><p className="mt-1 text-sm text-slate-500">{quiz.description}</p>
+              <div className="my-4 flex justify-between text-sm text-slate-500"><span className="flex gap-1"><Clock className="w-4 h-4" />{quiz.settings.timeLimit || 'Unlimited'} min</span><span>Pass {quiz.settings.passingScore}%</span></div>
+              <Button className="w-full" onClick={() => startQuiz(quiz._id)}><Play className="mr-2 w-4 h-4" />{quiz.userAttempt?.status === 'completed' ? `Review score: ${quiz.userAttempt.score}%` : 'Start quiz'}</Button>
             </CardContent>
           </Card>
-        </motion.div>
-      )}
+        ))}
+      </div>
+
+      <Dialog open={Boolean(activeQuiz)} onOpenChange={(open) => !open && setActiveQuiz(null)}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>{activeQuiz?.title}</DialogTitle></DialogHeader>
+          {result ? (
+            <div className="py-8 text-center"><Trophy className="mx-auto h-16 w-16 text-amber-500" /><p className="mt-4 text-4xl font-bold">{result.score.percentage}%</p><p className="text-slate-500">{result.passed ? 'Passed. Great work!' : 'Keep learning and try again.'}</p><Button className="mt-6" onClick={() => setActiveQuiz(null)}>Return to quizzes</Button></div>
+          ) : (
+            <div className="space-y-6">
+              {activeQuiz?.questions?.map((question, index) => (
+                <div key={question._id} className="rounded-xl border p-4">
+                  <p className="font-semibold">{index + 1}. {question.question}</p>
+                  <div className="mt-3 space-y-2">
+                    {question.options.map((option, optionIndex) => (
+                      <label key={option._id || optionIndex} className="flex cursor-pointer items-center gap-3 rounded-lg border p-3 hover:bg-slate-50 dark:hover:bg-slate-800">
+                        <input
+                          type="radio"
+                          name={question._id}
+                          value={option._id || ''}
+                          checked={answers[question._id] === option._id}
+                          onChange={() => setAnswers((current) => ({ ...current, [question._id]: option._id || '' }))}
+                        />
+                        <span>{option.text}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              <Button className="w-full" onClick={submitQuiz}><CheckCircle className="mr-2 w-4 h-4" />Submit quiz</Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

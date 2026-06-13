@@ -184,12 +184,12 @@ const quizSchema = new mongoose.Schema({
 
 // Virtual for question count
 quizSchema.virtual('questionCount').get(function() {
-  return this.questions.length;
+  return this.questions?.length || 0;
 });
 
 // Virtual for total possible points
 quizSchema.virtual('totalPoints').get(function() {
-  return this.questions.reduce((sum, q) => sum + (q.points || 1), 0);
+  return (this.questions || []).reduce((sum, q) => sum + (q.points || 1), 0);
 });
 
 // Pre-save middleware

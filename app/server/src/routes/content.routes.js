@@ -163,10 +163,10 @@ router.get('/modules/:id', authenticate, requireApprovedStudent, asyncHandler(as
   // Check if student can access this module's class level
   if (req.user.role === 'student' && module.chapter) {
     const chapter = await Chapter.findById(module.chapter);
-    if (chapter && chapter.classLevel > req.user.assignedClass) {
+    if (chapter && chapter.classLevel !== req.user.assignedClass) {
       return res.status(403).json({
         success: false,
-        message: 'This content is for a higher class level'
+        message: 'This content is not assigned to your class'
       });
     }
   }
@@ -217,6 +217,16 @@ router.post('/modules/:id/complete', authenticate, requireApprovedStudent, async
     });
   }
   
+  const alreadyCompleted = await LearningActivity.exists({
+    student: req.user._id,
+    module: module._id,
+    activityType: 'module_complete'
+  });
+
+  if (alreadyCompleted) {
+    return res.json({ success: true, message: 'Module was already completed' });
+  }
+
   // Log completion
   await LearningActivity.log({
     student: req.user._id,
@@ -248,8 +258,14 @@ router.post('/modules/:id/complete', authenticate, requireApprovedStudent, async
  * @access  Admin
  */
 router.post('/modules', authenticate, roles.admin, contentValidation.createModule, asyncHandler(async (req, res) => {
+  const chapter = await Chapter.findById(req.body.chapter);
+  if (!chapter) {
+    return res.status(404).json({ success: false, message: 'Chapter not found' });
+  }
+
   const module = await Module.create({
     ...req.body,
+    subject: req.body.subject || chapter.subject,
     createdBy: req.user._id
   });
   
@@ -257,6 +273,88 @@ router.post('/modules', authenticate, roles.admin, contentValidation.createModul
     success: true,
     message: 'Module created successfully',
     data: { module }
+  });
+}));
+
+/**
+ * @route   POST /api/content/learning-units
+ * @desc    Create a published chapter, module, and starter quiz
+ * @access  Admin
+ */
+router.post('/learning-units', authenticate, roles.admin, asyncHandler(async (req, res) => {
+  const { subject: subjectId, classLevel, title, description, lessonContent, quizQuestion } = req.body;
+  const subject = await Subject.findById(subjectId);
+
+  if (!subject || !Number.isInteger(Number(classLevel)) || Number(classLevel) < 8 || Number(classLevel) > 12 || !title?.trim()) {
+    return res.status(400).json({ success: false, message: 'Subject, class level, and title are required.' });
+  }
+
+  const chapter = await Chapter.create({
+    name: title.trim(),
+    description: description?.trim() || `Learning unit for ${subject.name}`,
+    subject: subject._id,
+    classLevel: Number(classLevel),
+    order: await Chapter.countDocuments({ subject: subject._id, classLevel: Number(classLevel) }) + 1,
+    isActive: true,
+    isPublished: true,
+    publishedAt: new Date(),
+    createdBy: req.user._id
+  });
+  const learningModule = await Module.create({
+    title: `${title.trim()}: Lesson`,
+    description: description?.trim() || `Learn and apply ${title.trim()}.`,
+    chapter: chapter._id,
+    subject: subject._id,
+    order: 1,
+    contentBlocks: [{
+      type: 'text',
+      title: title.trim(),
+      content: lessonContent?.trim() || `<p>Study the key ideas in ${title.trim()}, then apply them to a new example.</p>`,
+      order: 1
+    }],
+    isActive: true,
+    isPublished: true,
+    publishedAt: new Date(),
+    createdBy: req.user._id
+  });
+  const quiz = await Quiz.create({
+    title: `${title.trim()} Checkpoint`,
+    description: `A starter quiz for ${title.trim()}.`,
+    chapter: chapter._id,
+    module: learningModule._id,
+    subject: subject._id,
+    questions: [{
+      type: 'mcq',
+      question: quizQuestion?.trim() || `Which choice best demonstrates understanding of ${title.trim()}?`,
+      options: [
+        { text: 'Explain the idea and apply it to an example', isCorrect: true, order: 1 },
+        { text: 'Copy an answer without checking it', isCorrect: false, order: 2 },
+        { text: 'Skip the reasoning', isCorrect: false, order: 3 }
+      ],
+      explanation: 'Understanding is demonstrated through explanation and application.',
+      points: 1,
+      order: 1
+    }],
+    settings: { timeLimit: 5, attemptsAllowed: 3, passingScore: 60 },
+    isActive: true,
+    isPublished: true,
+    publishedAt: new Date(),
+    createdBy: req.user._id
+  });
+  learningModule.quiz = quiz._id;
+  await learningModule.save();
+  await Subject.findByIdAndUpdate(subject._id, {
+    $inc: {
+      'statistics.totalChapters': 1,
+      'statistics.totalModules': 1,
+      'statistics.totalQuizzes': 1
+    }
+  });
+
+  res.status(201).json({
+    success: true,
+    message: 'Published learning unit created successfully',
+    data: { chapter, module: learningModule, quiz }
   });
 }));
 
@@ -282,6 +380,15 @@ router.get('/my-content', authenticate, requireApprovedStudent, asyncHandler(asy
   })
     .populate('subject', 'name code color')
     .sort({ order: 1 });
+
+  const chapterIds = chapters.map((chapter) => chapter._id);
+  const modules = await Module.find({
+    chapter: { $in: chapterIds },
+    isActive: true,
+    isPublished: true
+  })
+    .select('-contentBlocks.content -__v')
+    .sort({ order: 1 });
   
   // Get user's progress
   const completedModules = await LearningActivity.distinct('module', {
@@ -294,8 +401,11 @@ router.get('/my-content', authenticate, requireApprovedStudent, asyncHandler(asy
     data: {
       subjects,
       chapters,
+      modules,
       progress: {
-        completedModules: completedModules.length
+        completedModules: completedModules.length,
+        completedModuleIds: completedModules.map(String),
+        totalModules: modules.length
       }
     }
   });

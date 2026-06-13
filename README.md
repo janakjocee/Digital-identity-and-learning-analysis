@@ -20,14 +20,45 @@ This platform is based on the IEEE published research:
 
 LearnSync AI is a comprehensive, full-stack AI-driven educational platform designed for Class 8-12 students. It integrates cutting-edge machine learning with modern web technologies to deliver personalized learning experiences.
 
+**Live application:** [digital-identity-and-learning-analy.vercel.app](https://digital-identity-and-learning-analy.vercel.app)
+
 ### Key Features
 
 - 🔐 **Secure Digital Identity** - JWT-based authentication with role-based access control
+- 📚 **Class-Specific Curriculum** - Published subjects, chapters, lessons, and quizzes for Classes 8-12
+- 🧑‍🏫 **Admin Curriculum Control** - Create subjects or publish a complete chapter, lesson, and quiz together
+- ✅ **Working Learning Flows** - Students can open lessons, record completion, take quizzes, and see results
 - 🤖 **AI-Powered Learning Analytics** - Real-time performance tracking and predictions
 - 📊 **Intelligent Performance Tracking** - Comprehensive dashboards with visualizations
 - 🎯 **Adaptive Learning Recommendations** - ML-powered personalized study plans
 - 📈 **Completion Monitoring** - Track progress with detailed analytics
 - 🧠 **Behavioral Insights** - Student clustering and risk assessment
+
+---
+
+## Application Screenshots
+
+### Admin curriculum control
+
+Admins can manage the shared subject catalogue and publish new class-specific learning units.
+
+![Admin curriculum control](docs/screenshots/admin-curriculum.png)
+
+### Student learning content
+
+Students only receive published subjects, chapters, and lessons assigned to their class.
+
+![Student learning content](docs/screenshots/student-content.png)
+
+### Student quizzes and live record
+
+Quiz submissions update the student's score history, analytics, and admin reporting data.
+
+![Student quizzes](docs/screenshots/student-quizzes.png)
+
+### Student analytics dashboard
+
+![Student analytics dashboard](docs/screenshots/student-dashboard.png)
 
 ---
 
@@ -159,6 +190,24 @@ npm --prefix backend run verify:accounts
 
 Never commit the real password to Git.
 
+### Seed the Class 8-12 Curriculum
+
+After creating the configured admin account, populate the common curriculum:
+
+```bash
+npm --prefix backend run seed:curriculum
+```
+
+The idempotent seed creates Mathematics, English, Science, Computer Science,
+History, and Geography for Classes 8-12. Each class receives a published
+chapter, readable lesson, and checkpoint quiz for every subject.
+
+To prepare accounts and curriculum together:
+
+```bash
+npm --prefix backend run seed:all
+```
+
 ### Production Deployment
 
 The `app` Vercel project includes the Express backend under `/api`. Configure
@@ -243,7 +292,8 @@ open port `5000` in the browser.
 **Capabilities:**
 - ✅ Approve/reject student registrations
 - ✅ Assign classes (8-12)
-- ✅ Create subjects → chapters → modules
+- ✅ Create subjects and publish complete learning units
+- ✅ Create chapters, readable modules, and starter quizzes together
 - ✅ Upload content (PDF, video, notes)
 - ✅ Create quizzes (MCQ, timed)
 - ✅ Monitor completion rates and AI risk alerts
@@ -266,6 +316,8 @@ open port `5000` in the browser.
 - ✅ Register account (pending approval)
 - ✅ Login securely
 - ✅ Access assigned class content
+- ✅ Open lessons and record module completion
+- ✅ Take class-specific quizzes and receive immediate results
 - ✅ Track completion percentage
 - ✅ View quiz history
 - ✅ Identify strength & weakness areas

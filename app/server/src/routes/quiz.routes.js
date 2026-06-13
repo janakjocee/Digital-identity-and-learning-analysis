@@ -7,15 +7,29 @@ const express = require('express');
 const Quiz = require('../models/Quiz');
 const QuizAttempt = require('../models/QuizAttempt');
 const LearningActivity = require('../models/LearningActivity');
+const Chapter = require('../models/Chapter');
 const { authenticate } = require('../middleware/auth.middleware');
-const { requireApprovedStudent } = require('../middleware/role.middleware');
-const { quizAttemptValidation } = require('../middleware/validation.middleware');
+const { roles, requireApprovedStudent } = require('../middleware/role.middleware');
+const { contentValidation, quizAttemptValidation } = require('../middleware/validation.middleware');
 const { asyncHandler } = require('../middleware/error.middleware');
 
 const router = express.Router();
 
-// All routes require authentication and approved student status
-router.use(authenticate, requireApprovedStudent);
+const studentCanAccessQuiz = async (quiz, studentClass) => {
+  if (!quiz.chapter) return false;
+  const chapter = await Chapter.findById(quiz.chapter._id || quiz.chapter).select('classLevel isActive isPublished');
+  return Boolean(chapter && chapter.classLevel === studentClass && chapter.isActive && chapter.isPublished);
+};
+
+router.use(authenticate);
+
+router.post('/', roles.admin, contentValidation.createQuiz, asyncHandler(async (req, res) => {
+  const quiz = await Quiz.create({ ...req.body, createdBy: req.user._id });
+  res.status(201).json({ success: true, message: 'Quiz created successfully', data: { quiz } });
+}));
+
+// Remaining routes are student learning workflows.
+router.use(requireApprovedStudent);
 
 /**
  * @route   GET /api/quizzes
@@ -33,6 +47,13 @@ router.get('/', asyncHandler(async (req, res) => {
   
   if (subject) filter.subject = subject;
   if (module) filter.module = module;
+
+  const classChapters = await Chapter.find({
+    classLevel: req.user.assignedClass,
+    isActive: true,
+    isPublished: true
+  }).distinct('_id');
+  filter.chapter = { $in: classChapters };
   
   // Get quizzes
   let quizzes = await Quiz.find(filter)
@@ -91,12 +112,17 @@ router.get('/:id', asyncHandler(async (req, res) => {
       message: 'Quiz not found'
     });
   }
+
+  if (!(await studentCanAccessQuiz(quiz, req.user.assignedClass))) {
+    return res.status(403).json({ success: false, message: 'This quiz is not assigned to your class' });
+  }
   
   // Remove correct answers from questions
   const quizObj = quiz.toObject();
   quizObj.questions = quizObj.questions.map(q => ({
     ...q,
     options: q.options.map(o => ({
+      _id: o._id,
       text: o.text,
       order: o.order
       // isCorrect removed
@@ -139,6 +165,10 @@ router.post('/:id/start', asyncHandler(async (req, res) => {
       success: false,
       message: 'Quiz not found'
     });
+  }
+
+  if (!(await studentCanAccessQuiz(quiz, req.user.assignedClass))) {
+    return res.status(403).json({ success: false, message: 'This quiz is not assigned to your class' });
   }
   
   // Check if quiz is available

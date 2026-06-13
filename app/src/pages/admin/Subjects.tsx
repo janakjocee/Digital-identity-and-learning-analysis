@@ -1,224 +1,137 @@
-/**
- * Subjects Page (Admin)
- * Content management for administrators
- */
-
-import { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
-import {
-  GraduationCap,
-  Plus,
-  Search,
-  MoreHorizontal,
-  BookOpen,
-  Layers,
-  FileQuestion
-} from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
+import { FormEvent, useEffect, useState } from 'react';
+import { BookOpen, FileQuestion, GraduationCap, Layers, Plus, Search } from 'lucide-react';
+import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Badge } from '../../components/ui/badge';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '../../components/ui/dialog';
+import { Textarea } from '../../components/ui/textarea';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../../components/ui/dialog';
 import api from '../../lib/api';
 import { toast } from 'sonner';
 
 interface Subject {
-  _id: string;
-  name: string;
-  code: string;
-  description?: string;
-  color: string;
-  classLevels: number[];
-  statistics: {
-    totalChapters: number;
-    totalModules: number;
-    totalQuizzes: number;
-  };
+  _id: string; name: string; code: string; description?: string; color: string; classLevels: number[];
+  statistics: { totalChapters: number; totalModules: number; totalQuizzes: number; };
 }
+const classes = [8, 9, 10, 11, 12];
 
 export default function Subjects() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-
-  useEffect(() => {
-    fetchSubjects();
-  }, []);
+  const [search, setSearch] = useState('');
+  const [subjectOpen, setSubjectOpen] = useState(false);
+  const [unitSubject, setUnitSubject] = useState<Subject | null>(null);
+  const [subjectForm, setSubjectForm] = useState({ name: '', code: '', description: '' });
+  const [unitForm, setUnitForm] = useState({ classLevel: '8', title: '', description: '', lessonContent: '', quizQuestion: '' });
+  const [loading, setLoading] = useState(true);
 
   const fetchSubjects = async () => {
     try {
-      const response = await api.get('/content/subjects');
-      setSubjects(response.data.data.subjects);
-    } catch (error) {
-      console.error('Failed to fetch subjects:', error);
+      const { data } = await api.get('/content/subjects');
+      setSubjects(data.data.subjects);
+    } catch {
+      toast.error('Unable to load subjects');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
+    }
+  };
+  useEffect(() => { fetchSubjects(); }, []);
+
+  const createSubject = async (event: FormEvent) => {
+    event.preventDefault();
+    try {
+      await api.post('/content/subjects', { ...subjectForm, classLevels: classes });
+      setSubjectOpen(false);
+      setSubjectForm({ name: '', code: '', description: '' });
+      await fetchSubjects();
+      toast.success('Subject created for Classes 8–12');
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Unable to create subject');
     }
   };
 
-  const filteredSubjects = subjects.filter(s =>
-    s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    s.code.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const createUnit = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!unitSubject) return;
+    try {
+      await api.post('/content/learning-units', { ...unitForm, subject: unitSubject._id, classLevel: Number(unitForm.classLevel) });
+      setUnitSubject(null);
+      setUnitForm({ classLevel: '8', title: '', description: '', lessonContent: '', quizQuestion: '' });
+      await fetchSubjects();
+      toast.success('Published chapter, lesson, and quiz created');
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Unable to create learning unit');
+    }
+  };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
-      </div>
-    );
-  }
+  const visible = subjects.filter((subject) => `${subject.name} ${subject.code}`.toLowerCase().includes(search.toLowerCase()));
+  const totals = subjects.reduce((sum, subject) => ({
+    chapters: sum.chapters + subject.statistics.totalChapters,
+    modules: sum.modules + subject.statistics.totalModules,
+    quizzes: sum.quizzes + subject.statistics.totalQuizzes
+  }), { chapters: 0, modules: 0, quizzes: 0 });
+
+  if (loading) return <div className="flex h-96 items-center justify-center"><div className="h-12 w-12 animate-spin rounded-full border-b-2 border-blue-600" /></div>;
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center space-x-2">
-            <GraduationCap className="w-6 h-6 text-blue-600" />
-            <span>Subjects</span>
-          </h1>
-          <p className="text-slate-500 dark:text-slate-400">
-            Manage subjects, chapters, and learning content
-          </p>
-        </div>
-        <div className="flex items-center space-x-3">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <Input
-              placeholder="Search subjects..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 w-64"
-            />
-          </div>
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="bg-gradient-to-r from-blue-600 to-purple-600">
-                <Plus className="w-4 h-4 mr-2" />
-                Add Subject
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Add New Subject</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 pt-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Subject Name</label>
-                  <Input placeholder="e.g., Mathematics" />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Subject Code</label>
-                  <Input placeholder="e.g., MATH" />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Description</label>
-                  <Input placeholder="Brief description" />
-                </div>
-                <Button className="w-full bg-gradient-to-r from-blue-600 to-purple-600">
-                  Create Subject
-                </Button>
-              </div>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div><h1 className="flex items-center gap-2 text-2xl font-bold"><GraduationCap className="text-blue-600" />Curriculum control</h1><p className="text-slate-500">Create subjects and publish complete learning units for students.</p></div>
+        <div className="flex gap-3">
+          <div className="relative"><Search className="absolute left-3 top-3 w-4 h-4 text-slate-400" /><Input className="pl-9" placeholder="Search subjects" value={search} onChange={(e) => setSearch(e.target.value)} /></div>
+          <Dialog open={subjectOpen} onOpenChange={setSubjectOpen}>
+            <DialogTrigger asChild><Button><Plus className="mr-2 w-4 h-4" />Add subject</Button></DialogTrigger>
+            <DialogContent><DialogHeader><DialogTitle>Add subject</DialogTitle></DialogHeader>
+              <form className="space-y-4" onSubmit={createSubject}>
+                <Input required placeholder="Subject name" value={subjectForm.name} onChange={(e) => setSubjectForm({ ...subjectForm, name: e.target.value })} />
+                <Input required placeholder="Subject code" value={subjectForm.code} onChange={(e) => setSubjectForm({ ...subjectForm, code: e.target.value.toUpperCase() })} />
+                <Textarea placeholder="Description" value={subjectForm.description} onChange={(e) => setSubjectForm({ ...subjectForm, description: e.target.value })} />
+                <p className="text-sm text-slate-500">The new subject will be available to Classes 8–12.</p>
+                <Button className="w-full" type="submit">Create subject</Button>
+              </form>
             </DialogContent>
           </Dialog>
         </div>
       </div>
 
-      {/* Stats */}
       <div className="grid grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold">{subjects.length}</p>
-            <p className="text-sm text-slate-500">Total Subjects</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold">
-              {subjects.reduce((sum, s) => sum + s.statistics.totalChapters, 0)}
-            </p>
-            <p className="text-sm text-slate-500">Total Chapters</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold">
-              {subjects.reduce((sum, s) => sum + s.statistics.totalModules, 0)}
-            </p>
-            <p className="text-sm text-slate-500">Total Modules</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold">
-              {subjects.reduce((sum, s) => sum + s.statistics.totalQuizzes, 0)}
-            </p>
-            <p className="text-sm text-slate-500">Total Quizzes</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Subjects Grid */}
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredSubjects.map((subject, index) => (
-          <motion.div
-            key={subject._id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.05 }}
-          >
-            <Card className="group hover:shadow-lg transition-shadow">
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between mb-4">
-                  <div
-                    className="w-14 h-14 rounded-xl flex items-center justify-center"
-                    style={{ backgroundColor: subject.color }}
-                  >
-                    <GraduationCap className="w-7 h-7 text-white" />
-                  </div>
-                  <Button variant="ghost" size="sm">
-                    <MoreHorizontal className="w-4 h-4" />
-                  </Button>
-                </div>
-                <h3 className="text-xl font-bold mb-1">{subject.name}</h3>
-                <p className="text-sm text-slate-500 mb-4">{subject.code}</p>
-                <p className="text-sm text-slate-600 dark:text-slate-400 mb-4 line-clamp-2">
-                  {subject.description || 'No description available'}
-                </p>
-                <div className="flex items-center space-x-4 text-sm text-slate-500">
-                  <div className="flex items-center space-x-1">
-                    <BookOpen className="w-4 h-4" />
-                    <span>{subject.statistics.totalChapters}</span>
-                  </div>
-                  <div className="flex items-center space-x-1">
-                    <Layers className="w-4 h-4" />
-                    <span>{subject.statistics.totalModules}</span>
-                  </div>
-                  <div className="flex items-center space-x-1">
-                    <FileQuestion className="w-4 h-4" />
-                    <span>{subject.statistics.totalQuizzes}</span>
-                  </div>
-                </div>
-                <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-800">
-                  <div className="flex flex-wrap gap-2">
-                    {subject.classLevels.map(level => (
-                      <Badge key={level} variant="secondary">Class {level}</Badge>
-                    ))}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
+        {[['Subjects', subjects.length], ['Chapters', totals.chapters], ['Lessons', totals.modules], ['Quizzes', totals.quizzes]].map(([label, value]) => (
+          <Card key={label}><CardContent className="p-4 text-center"><p className="text-2xl font-bold">{value}</p><p className="text-sm text-slate-500">{label}</p></CardContent></Card>
         ))}
       </div>
+
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+        {visible.map((subject) => (
+          <Card key={subject._id}>
+            <CardContent className="p-6">
+              <div className="flex items-start justify-between"><div className="rounded-xl p-3" style={{ backgroundColor: subject.color }}><GraduationCap className="text-white" /></div><Badge>{subject.code}</Badge></div>
+              <h3 className="mt-4 text-xl font-bold">{subject.name}</h3><p className="mt-1 min-h-10 text-sm text-slate-500">{subject.description}</p>
+              <div className="my-4 flex justify-between text-sm text-slate-500">
+                <span className="flex gap-1"><BookOpen className="w-4 h-4" />{subject.statistics.totalChapters}</span>
+                <span className="flex gap-1"><Layers className="w-4 h-4" />{subject.statistics.totalModules}</span>
+                <span className="flex gap-1"><FileQuestion className="w-4 h-4" />{subject.statistics.totalQuizzes}</span>
+              </div>
+              <div className="mb-4 flex flex-wrap gap-1">{subject.classLevels.map((level) => <Badge key={level} variant="secondary">Class {level}</Badge>)}</div>
+              <Button className="w-full" variant="outline" onClick={() => setUnitSubject(subject)}><Plus className="mr-2 w-4 h-4" />Add published learning unit</Button>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <Dialog open={Boolean(unitSubject)} onOpenChange={(open) => !open && setUnitSubject(null)}>
+        <DialogContent className="max-w-xl"><DialogHeader><DialogTitle>Add {unitSubject?.name} learning unit</DialogTitle></DialogHeader>
+          <form className="space-y-4" onSubmit={createUnit}>
+            <label className="block text-sm font-medium">Class
+              <select className="mt-1 w-full rounded-md border bg-background p-2" value={unitForm.classLevel} onChange={(e) => setUnitForm({ ...unitForm, classLevel: e.target.value })}>{classes.map((level) => <option key={level} value={level}>Class {level}</option>)}</select>
+            </label>
+            <Input required placeholder="Unit title" value={unitForm.title} onChange={(e) => setUnitForm({ ...unitForm, title: e.target.value })} />
+            <Textarea placeholder="Short description" value={unitForm.description} onChange={(e) => setUnitForm({ ...unitForm, description: e.target.value })} />
+            <Textarea placeholder="Lesson content" value={unitForm.lessonContent} onChange={(e) => setUnitForm({ ...unitForm, lessonContent: e.target.value })} />
+            <Input placeholder="Starter quiz question" value={unitForm.quizQuestion} onChange={(e) => setUnitForm({ ...unitForm, quizQuestion: e.target.value })} />
+            <p className="text-sm text-slate-500">Publishing creates a chapter, readable lesson, and student quiz together.</p>
+            <Button className="w-full" type="submit">Publish learning unit</Button>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
