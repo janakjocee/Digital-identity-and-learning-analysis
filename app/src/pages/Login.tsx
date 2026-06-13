@@ -23,18 +23,20 @@ export default function Login({ portal = 'student' }: LoginProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setErrorMessage('');
 
     try {
       const user = await login(email, password, portal);
       navigate(getUserHomePath(user));
-    } catch (error) {
-      // Error is handled in auth context
+    } catch (error: any) {
+      setErrorMessage(error.response?.data?.message || 'Unable to sign in. Please check the credentials and try again.');
     } finally {
       setIsLoading(false);
     }
@@ -75,6 +77,11 @@ export default function Login({ portal = 'student' }: LoginProps) {
             <div><p className="font-semibold">{portal === 'admin' ? 'Admin sign in' : 'Student sign in'}</p><p className="text-xs text-slate-500">{portal === 'admin' ? 'Manage students, curriculum, and reports.' : 'Access subjects, lessons, quizzes, and progress.'}</p></div>
           </div>
           <form onSubmit={handleSubmit} className="space-y-6">
+            {errorMessage && (
+              <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700 dark:border-red-900 dark:bg-red-900/20 dark:text-red-300">
+                {errorMessage}
+              </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <div className="relative">
@@ -84,7 +91,7 @@ export default function Login({ portal = 'student' }: LoginProps) {
                   type="email"
                   placeholder="Enter your email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => { setEmail(e.target.value); setErrorMessage(''); }}
                   className="pl-10"
                   required
                 />
@@ -100,7 +107,7 @@ export default function Login({ portal = 'student' }: LoginProps) {
                   type={showPassword ? 'text' : 'password'}
                   placeholder="Enter your password"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => { setPassword(e.target.value); setErrorMessage(''); }}
                   className="pl-10 pr-10"
                   required
                 />
