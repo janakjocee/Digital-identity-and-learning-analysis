@@ -151,13 +151,14 @@ export default function Login() {
           </div>
         </motion.div>
 
-        {/* Development account setup */}
-        <div className="mt-8 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
-          <p className="text-sm text-blue-800 dark:text-blue-300 font-medium mb-2">Development accounts</p>
-          <p className="text-sm text-blue-700 dark:text-blue-400">
-            Configure approved admin and student accounts in <code>backend/.env</code>, then run the development start script.
-          </p>
-        </div>
+        {import.meta.env.DEV && (
+          <div className="mt-8 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
+            <p className="text-sm text-blue-800 dark:text-blue-300 font-medium mb-2">Development accounts</p>
+            <p className="text-sm text-blue-700 dark:text-blue-400">
+              Configure approved admin and student accounts in <code>backend/.env</code>, then run the development start script.
+            </p>
+          </div>
+        )}
       </motion.div>
     </div>
   );
