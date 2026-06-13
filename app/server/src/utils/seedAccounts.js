@@ -7,13 +7,21 @@ require('dotenv').config({ path: path.resolve(__dirname, '../../../../backend/.e
 const requiredEnvironment = [
   'MONGODB_URI',
   'DEV_ADMIN_EMAIL',
-  'DEV_STUDENT_EMAIL',
-  'DEV_ACCOUNT_PASSWORD'
+  'DEV_STUDENT_EMAIL'
 ];
 
-const getMissingEnvironment = () => requiredEnvironment.filter((name) => !process.env[name]);
+const getAccountPassword = (role) => (
+  process.env[role === 'admin' ? 'DEV_ADMIN_PASSWORD' : 'DEV_STUDENT_PASSWORD']
+  || process.env.DEV_ACCOUNT_PASSWORD
+);
 
-const upsertAccount = async ({ email, firstName, lastName, role, assignedClass }) => {
+const getMissingEnvironment = () => [
+  ...requiredEnvironment.filter((name) => !process.env[name]),
+  ...(!getAccountPassword('admin') ? ['DEV_ADMIN_PASSWORD or DEV_ACCOUNT_PASSWORD'] : []),
+  ...(!getAccountPassword('student') ? ['DEV_STUDENT_PASSWORD or DEV_ACCOUNT_PASSWORD'] : [])
+];
+
+const upsertAccount = async ({ email, firstName, lastName, role, assignedClass, password }) => {
   let user = await User.findOne({ email }).select('+password');
   const action = user ? 'updated' : 'created';
 
@@ -27,14 +35,14 @@ const upsertAccount = async ({ email, firstName, lastName, role, assignedClass }
   user.status = 'approved';
   user.emailVerified = true;
   user.assignedClass = role === 'student' ? assignedClass : undefined;
-  user.password = process.env.DEV_ACCOUNT_PASSWORD;
+  user.password = password;
   user.loginAttempts = 0;
   user.lockUntil = undefined;
   user.approvedAt = user.approvedAt || new Date();
 
   await user.save();
 
-  const passwordValid = await user.comparePassword(process.env.DEV_ACCOUNT_PASSWORD);
+  const passwordValid = await user.comparePassword(password);
   if (!passwordValid) {
     throw new Error(`Password verification failed for ${email}`);
   }
@@ -51,8 +59,10 @@ const seedConfiguredAccounts = async ({ connect = true, required = true } = {}) 
     return false;
   }
 
-  if (process.env.DEV_ACCOUNT_PASSWORD.length < 8) {
-    throw new Error('DEV_ACCOUNT_PASSWORD must be at least 8 characters.');
+  const adminPassword = getAccountPassword('admin');
+  const studentPassword = getAccountPassword('student');
+  if (adminPassword.length < 8 || studentPassword.length < 8) {
+    throw new Error('Configured account passwords must be at least 8 characters.');
   }
 
   const openedConnection = connect && mongoose.connection.readyState !== 1;
@@ -65,7 +75,8 @@ const seedConfiguredAccounts = async ({ connect = true, required = true } = {}) 
       email: process.env.DEV_ADMIN_EMAIL.toLowerCase(),
       firstName: process.env.DEV_ADMIN_FIRST_NAME || 'Janak',
       lastName: process.env.DEV_ADMIN_LAST_NAME || 'Joshi',
-      role: 'admin'
+      role: 'admin',
+      password: adminPassword
     });
 
     await upsertAccount({
@@ -73,7 +84,8 @@ const seedConfiguredAccounts = async ({ connect = true, required = true } = {}) 
       firstName: process.env.DEV_STUDENT_FIRST_NAME || 'Janak',
       lastName: process.env.DEV_STUDENT_LAST_NAME || 'Student',
       role: 'student',
-      assignedClass: Number(process.env.DEV_STUDENT_CLASS || 8)
+      assignedClass: Number(process.env.DEV_STUDENT_CLASS || 8),
+      password: studentPassword
     });
 
     console.log('Configured accounts are ready.');

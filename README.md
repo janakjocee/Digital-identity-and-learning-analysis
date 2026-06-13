@@ -169,6 +169,9 @@ Add the account emails and a password to your local `backend/.env`:
 DEV_ADMIN_EMAIL=admin@example.com
 DEV_STUDENT_EMAIL=student@example.com
 DEV_ACCOUNT_PASSWORD=replace-with-a-strong-password
+# Optional when admin and student should use different passwords:
+DEV_ADMIN_PASSWORD=replace-with-an-admin-password
+DEV_STUDENT_PASSWORD=replace-with-a-student-password
 DEV_STUDENT_CLASS=8
 ```
 
