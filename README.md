@@ -22,6 +22,14 @@ LearnSync AI is a comprehensive, full-stack AI-driven educational platform desig
 
 **Live application:** [digital-identity-and-learning-analy.vercel.app](https://digital-identity-and-learning-analy.vercel.app)
 
+### Production portals
+
+- **Student sign in:** [digital-identity-and-learning-analy.vercel.app/login](https://digital-identity-and-learning-analy.vercel.app/login)
+- **Admin sign in:** [digital-identity-and-learning-analy.vercel.app/admin/login](https://digital-identity-and-learning-analy.vercel.app/admin/login)
+
+The portals enforce role boundaries in the API: student accounts cannot enter
+the admin portal, and administrator accounts cannot enter the student portal.
+
 ### Key Features
 
 - 🔐 **Secure Digital Identity** - JWT-based authentication with role-based access control
@@ -36,17 +44,22 @@ LearnSync AI is a comprehensive, full-stack AI-driven educational platform desig
 
 ---
 
-## Application Screenshots
+## Production Screenshots
+
+The screenshots below show the deployed production application connected to
+MongoDB Atlas.
 
 ### Admin curriculum control
 
-Admins can manage the shared subject catalogue and publish new class-specific learning units.
+Admins can manage the shared subject catalogue, inspect live totals, and
+publish new class-specific learning units.
 
 ![Admin curriculum control](docs/screenshots/admin-curriculum.png)
 
 ### Student learning content
 
-Students only receive published subjects, chapters, and lessons assigned to their class.
+Students only receive published subjects, chapters, lessons, and quizzes
+assigned to their class.
 
 ![Student learning content](docs/screenshots/student-content.png)
 
@@ -59,6 +72,17 @@ Quiz submissions update the student's score history, analytics, and admin report
 ### Student analytics dashboard
 
 ![Student analytics dashboard](docs/screenshots/student-dashboard.png)
+
+### Verified production curriculum
+
+| Scope | Subjects | Chapters | Modules | Quizzes |
+|---|---:|---:|---:|---:|
+| Platform admin catalogue | 6 | 30 | 60 | 60 |
+| One student class | 6 | 6 | 12 | 12 |
+
+Every class/subject includes a **Core Concepts** lesson and an **Applied
+Practice** lesson. Each lesson has subject-specific explanations, an
+independent task, and its own checkpoint quiz with feedback.
 
 ---
 
@@ -203,7 +227,9 @@ npm --prefix backend run seed:curriculum
 
 The idempotent seed creates Mathematics, English, Science, Computer Science,
 History, and Geography for Classes 8-12. Each class receives a published
-chapter, readable lesson, and checkpoint quiz for every subject.
+chapter plus two readable modules and two checkpoint quizzes for every
+subject. Questions and explanations are subject-specific rather than generic
+placeholder content.
 
 To prepare accounts and curriculum together:
 
@@ -279,6 +305,8 @@ npm --prefix app run dev -- --host 0.0.0.0
 ### Access the Application
 
 - Frontend: http://localhost:5173
+- Student login: http://localhost:5173/login
+- Admin login: http://localhost:5173/admin/login
 - Backend API: http://localhost:5000
 - AI Service: http://localhost:8000
 
@@ -414,6 +442,27 @@ Tracks:
 ---
 
 ## 🧪 API Documentation
+
+### Verified workflow matrix
+
+The following workflows are covered by automated integration tests and were
+also verified against the production deployment:
+
+- Admin and student authentication with separate role-enforced portals
+- Admin dashboard, student management, live reports, and audit logs
+- Admin publishing of a complete chapter, module, and quiz
+- Student subject and class-content retrieval
+- Lesson opening, completion, and completion-rate refresh
+- Quiz start, answer submission, scoring, completion, and result review
+- Student progress and analytics retrieval
+
+Run the local regression suite:
+
+```bash
+npm test --prefix backend
+npm --prefix app run lint
+npm --prefix app run build
+```
 
 ### Authentication Endpoints
 
