@@ -141,6 +141,22 @@ test('admin login returns tokens and grants admin dashboard access', async () =>
   assert.equal(response.status, 200);
 });
 
+test('student and admin portals reject the wrong account role', async () => {
+  const studentOnAdmin = await request('/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: 'student@test.com', password: PASSWORD, portal: 'admin' })
+  });
+  assert.equal(studentOnAdmin.response.status, 403);
+
+  const adminOnStudent = await request('/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: 'admin@test.com', password: PASSWORD, portal: 'student' })
+  });
+  assert.equal(adminOnStudent.response.status, 403);
+});
+
 test('approved student login returns tokens and grants student dashboard access', async () => {
   const data = await login('student@test.com');
   assert.equal(data.user.role, 'student');

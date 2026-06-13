@@ -17,7 +17,7 @@ export default function RoleRoute({ children, allowedRoles }: RoleRouteProps) {
   const { user, isAuthenticated } = useAuth();
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to={allowedRoles.some((role) => role === 'admin' || role === 'superadmin') ? '/admin/login' : '/login'} replace />;
   }
 
   if (!allowedRoles.includes(user?.role || '')) {
