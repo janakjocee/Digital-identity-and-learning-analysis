@@ -184,6 +184,12 @@ curl https://your-domain.example/api/health
 
 The response must report `"success": true` and `"database": "connected"`.
 
+Verify both configured production accounts and their protected dashboards:
+
+```bash
+npm --prefix backend run verify:production
+```
+
 ### Manual Setup
 
 Always run these commands from the repository root. Start MongoDB first:
