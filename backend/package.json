@@ -8,6 +8,8 @@
     "dev": "nodemon server.js",
     "test": "node --test --test-concurrency=1",
     "seed:accounts": "node ../app/server/src/utils/seedAccounts.js",
+    "seed:curriculum": "node ../app/server/src/utils/seedCurriculum.js",
+    "seed:all": "npm run seed:accounts && npm run seed:curriculum",
     "verify:accounts": "node ../app/server/src/utils/verifyAccounts.js",
     "verify:production": "node ../app/server/src/utils/verifyAccounts.js https://digital-identity-and-learning-analy.vercel.app/api"
   },
